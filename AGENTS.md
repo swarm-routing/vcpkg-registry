@@ -7,7 +7,7 @@ before changing anything. Org-wide conventions:
 
 ## What this repo is
 
-**Status: onboarded to the org pipeline (swarm-routing/.github#437); the first port is being added (#1).** Epic: swarm-routing/.github#436.
+**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the protocol cores follow (swarm-routing/.github#436).** Epic: swarm-routing/.github#436.
 
 The swarm-routing org's [vcpkg git registry](https://learn.microsoft.com/vcpkg/maintainers/registries):
 one port per simulator-free C++ core the org releases (`swarm-core` first,
@@ -20,17 +20,34 @@ ports (swarm-routing/.github#440). In-org repositories consume swarm-core by
 release lock, not through this registry (CONTRIBUTING "Dependencies").
 
 ```
-ports/<port>/        (planned, #1) vcpkg.json, portfile.cmake, usage: one port per library
-versions/            (planned, #1) baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
-templates/<port>/    (planned, #1) a port not released here yet: copied into ports/ on its first release
-tools/port_bump.py   (planned, #1) renders a bump from a release (SHA512 of the asset, git-tree); check: versions/ matches ports/
+ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core today)
+versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
+templates/<port>/    (planned: the protocol cores) a port not released yet: moved into ports/ on its first release
+tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/
+test/consumer/       the scratch project CI builds with find_package against every port
+.github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions
 ```
 
 ## Build & verify
 
 ```bash
 make help    # the org's standard target names: build, test, lint, format, check, clean, shell, ci
-make check   # everything CI gates on
+make check   # everything CI gates on except vcpkg itself: lint, test (port_bump.py --self-test, check), headers, org-sync
+python3 -I tools/port_bump.py bump --port swarm-core --tag vX.Y.Z   # a bump from a release (what the release job runs)
+python3 -I tools/port_bump.py check                                 # versions/ matches ports/ (before committing)
+```
+
+vcpkg itself (as `.github/workflows/registry.yml`; a partial clone is ~150 MB):
+
+```bash
+git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git ../vcpkg
+git -C ../vcpkg checkout <VCPKG_COMMIT from registry.yml> && ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
+# vcpkg reports our ports' builtin helper dependencies (vcpkg-cmake, vcpkg-cmake-config) as missing
+# from our database; CI accepts exactly that error. Empty output from the second line is a pass:
+../vcpkg/vcpkg x-ci-verify-versions --verbose --verify-git-trees --x-builtin-ports-root=./ports --x-builtin-registry-versions-dir=./versions \
+  | grep ': error:' | grep -Ev 'error: the dependency vcpkg-cmake(-config)? does not exist in the version database'
+# the consumer: copy test/consumer/, add a vcpkg-configuration.json naming this checkout as a git
+# registry at a committed HEAD (the CI step writes it), then cmake with the vcpkg toolchain file
 ```
 
 ## Golden rules (invariants — do not break)
@@ -362,6 +379,7 @@ because the issue threads were thorough. Caveman the chat, not the record.
 | You want to… | Go to |
 |--------------|-------|
 | The org's invariants, labels, issue shape | [`swarm-routing/.github` CONTRIBUTING.md](https://github.com/swarm-routing/.github/blob/main/CONTRIBUTING.md) |
+| Add a port (a new library) | `templates/<port>/` (vcpkg.json at 0.0.0, portfile.cmake with `SHA512 0`), its library's release opts in with `vcpkg-ports`; swarm-routing/.github#439 |
 | The design and the plan | swarm-routing/ns3-swarm-core#135 (why vcpkg), epic swarm-routing/.github#436, #1 |
 | Record an architecture decision | [`docs/adr/`](docs/adr/) (`0000-template.md`) |
 | Pick up open work | this repo's issues — highest open `priority:P*` first; newest open `handoff` issue for work in flight |

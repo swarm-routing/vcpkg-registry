@@ -1,0 +1,152 @@
+# Copyright (c) 2026 Daniel Joppi (https://github.com/swarm-routing)
+# SPDX-License-Identifier: MIT OR GPL-2.0-only
+name: Registry
+
+# The registry's gates (AGENTS.md golden rules 10-13):
+#   tools    tools/port_bump.py --self-test, `check` (versions/ matches ports/), ruff
+#   install  vcpkg at a pinned commit; every port installed from THIS registry
+#            (a git registry at the commit under test) on x64-linux and
+#            wasm32-emscripten; the scratch consumer in test/consumer/ built
+#            with find_package and run (node for WebAssembly); on x64-linux
+#            also `vcpkg x-ci-verify-versions --verify-git-trees`.
+# vcpkg's own helper ports (vcpkg-cmake, vcpkg-cmake-config) come from the
+# builtin registry at VCPKG_COMMIT. No secret is needed.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:  # the merge queue runs the required checks on each group (swarm-routing/.github#130)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # microsoft/vcpkg tag 2026.10.16
+  VCPKG_COMMIT: 9eec002df1cd109f8f104cd966a763daf9751489
+  # the same emsdk as the site's WebAssembly build (AntHocNet .github/actions/setup-emsdk)
+  EMSDK_VERSION: '4.0.10'
+
+jobs:
+  tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        timeout-minutes: 2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: port_bump.py self-test and check
+        run: |
+          python3 -I tools/port_bump.py --self-test
+          python3 -I tools/port_bump.py check
+      - name: ruff (the org's pin)
+        timeout-minutes: 3
+        run: |
+          python3 -m pip install --user --only-binary=:all: ruff==0.17.1
+          ruff check tools && ruff format --check tools
+
+  install:
+    name: install (${{ matrix.triplet }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        triplet: [x64-linux, wasm32-emscripten]
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
+        timeout-minutes: 2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # the git registry reads versions/ and ports/ from this history
+      - name: Bootstrap vcpkg at the pinned commit
+        timeout-minutes: 10
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
+          git -C "$RUNNER_TEMP/vcpkg" checkout -q "$VCPKG_COMMIT"
+          "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
+      - name: Install emsdk
+        if: matrix.triplet == 'wasm32-emscripten'
+        timeout-minutes: 10
+        run: |
+          git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
+          "$RUNNER_TEMP/emsdk/emsdk" install "$EMSDK_VERSION"
+          "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
+          echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+      - name: Verify the versions database
+        if: matrix.triplet == 'x64-linux'
+        run: |
+          # Our database holds our ports only, so vcpkg reports their helper
+          # dependencies (vcpkg-cmake, vcpkg-cmake-config) as unknown; those
+          # come from the builtin registry: accept exactly that error, for a
+          # dependency that is in vcpkg's own baseline, and nothing else.
+          out=$("$VCPKG_ROOT/vcpkg" x-ci-verify-versions --verbose --verify-git-trees \
+                  --x-builtin-ports-root=./ports --x-builtin-registry-versions-dir=./versions 2>&1) || true
+          echo "$out"
+          bad=0
+          while IFS= read -r line; do
+            dep=$(sed -n 's/.*error: the dependency \([a-z0-9-]*\) does not exist in the version database.*/\1/p' <<<"$line")
+            if [ -n "$dep" ] && python3 -c 'import json,sys; sys.exit(sys.argv[1] not in json.load(open(sys.argv[2]))["default"])' \
+                 "$dep" "$VCPKG_ROOT/versions/baseline.json"; then
+              continue
+            fi
+            echo "::error::$line"; bad=1
+          done < <(grep ': error:' <<<"$out" || true)
+          grep -q 'is correctly in the version database' <<<"$out" || { echo "::error::no port verified"; bad=1; }
+          exit "$bad"
+      - name: Install every port from this registry and build the consumer
+        # recent runs: ~1 min (x64-linux), ~2 min (wasm32-emscripten)
+        timeout-minutes: 20
+        env:
+          TRIPLET: ${{ matrix.triplet }}
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/consumer"
+          cp -r test/consumer "$work"
+          # every port of this registry, from this commit
+          python3 - "$work" "$GITHUB_WORKSPACE" "$(git rev-parse HEAD)" "$VCPKG_COMMIT" <<'EOF'
+          import json, os, sys
+          work, repo, head, vcpkg = sys.argv[1:]
+          ports = sorted(os.listdir(os.path.join(repo, "ports")))
+          json.dump({"default-registry": {"kind": "builtin", "baseline": vcpkg},
+                     "registries": [{"kind": "git", "repository": repo, "reference": "HEAD",
+                                     "baseline": head, "packages": ports}]},
+                    open(os.path.join(work, "vcpkg-configuration.json"), "w"), indent=2)
+          m = json.load(open(os.path.join(work, "vcpkg.json")))
+          m["dependencies"] = ports
+          json.dump(m, open(os.path.join(work, "vcpkg.json"), "w"), indent=2)
+          print("ports:", " ".join(ports))
+          EOF
+          cat "$work/vcpkg-configuration.json"
+          args=(-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET="$TRIPLET")
+          if [ "$TRIPLET" = wasm32-emscripten ]; then
+            # shellcheck disable=SC1091
+            source "$EMSDK/emsdk_env.sh"
+            args+=(-DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake")
+          fi
+          cmake -S "$work" -B "$work/build" -G Ninja "${args[@]}"
+          cmake --build "$work/build"
+          if [ "$TRIPLET" = wasm32-emscripten ]; then node "$work/build/consumer.js"; else "$work/build/consumer"; fi
+      - name: vcpkg logs
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vcpkg-logs-${{ matrix.triplet }}
+          path: |
+            ${{ runner.temp }}/vcpkg/buildtrees/**/*.log
+            ${{ runner.temp }}/consumer/build/vcpkg-manifest-install.log
+          retention-days: 3

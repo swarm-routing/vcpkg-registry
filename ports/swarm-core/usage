@@ -1,0 +1,8 @@
+swarm-core provides CMake targets:
+
+    find_package(swarm-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE swarm::core)
+
+Headers: #include "swarm-ports.h" (include/swarm-core/), the testbench as
+#include "testbench/swarm-testbench.h". Before 1.0 any minor may break the
+API: pin a version (README "Versions").
