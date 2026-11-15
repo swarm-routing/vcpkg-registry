@@ -1,0 +1,6 @@
+termite-core provides CMake targets:
+
+    find_package(termite-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE termite::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "termite-config.h" (include/termite-core/).

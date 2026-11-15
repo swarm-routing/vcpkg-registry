@@ -1,0 +1,6 @@
+ara-core provides CMake targets:
+
+    find_package(ara-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE ara::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "ara-config.h" (include/ara-core/).

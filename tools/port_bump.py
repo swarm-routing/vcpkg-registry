@@ -111,6 +111,30 @@ def fetch(url):
         raise Failure(f"cannot download {url}: {e}") from None
 
 
+def release_sha256(url, name):
+    """The asset's sha256 as its release lists it: the release's SHA256SUMS
+    (swarm-routing/.github reusable-release.yml), else the asset's own
+    `<asset>.sha256` (AntHocNet's release workflow)."""
+    base = url.rsplit("/", 1)[0]
+    try:
+        sums = fetch(base + "/SHA256SUMS").decode()
+    except Failure:
+        try:
+            sums = fetch(url + ".sha256").decode()
+        except Failure:
+            raise Failure(
+                f"{name}: the release has neither SHA256SUMS nor {name}.sha256"
+            ) from None
+        first = sums.split()
+        return first[0] if first else None
+    listed = {
+        ln.split()[1].lstrip("*"): ln.split()[0]
+        for ln in sums.splitlines()
+        if ln.strip()
+    }
+    return listed.get(name)
+
+
 def asset_url(portfile_text, version, base_url):
     m = URLS_RE.search(portfile_text)
     if not m:
@@ -149,16 +173,9 @@ def bump(root, port, tag, base_url=""):
     url = asset_url(text, version, base_url)
     asset = fetch(url)
     name = url.rsplit("/", 1)[1]
-    sums = fetch(url.rsplit("/", 1)[0] + "/SHA256SUMS").decode()
-    listed = {
-        ln.split()[1].lstrip("*"): ln.split()[0]
-        for ln in sums.splitlines()
-        if ln.strip()
-    }
-    if listed.get(name) != hashlib.sha256(asset).hexdigest():
-        raise Failure(
-            f"{name}: its sha256 is not the one the release's SHA256SUMS lists"
-        )
+    listed = release_sha256(url, name)
+    if listed != hashlib.sha256(asset).hexdigest():
+        raise Failure(f"{name}: its sha256 is not the one the release lists")
     if not SHA512_RE.search(text):
         raise Failure("portfile.cmake: no SHA512 line")
     text = SHA512_RE.sub(
@@ -225,6 +242,14 @@ def check(root):
     for t in sorted(os.listdir(tdir)) if os.path.isdir(tdir) else []:
         if t in ports:
             problems.append(f"{t}: in both ports/ and templates/")
+        tm = read_json(os.path.join(tdir, t, "vcpkg.json"))
+        tp = read_text(os.path.join(tdir, t, "portfile.cmake"))
+        if tm.get("name") != t:
+            problems.append(f"templates/{t}: vcpkg.json names {tm.get('name')!r}")
+        if not URLS_RE.search(tp) or not SHA512_RE.search(tp):
+            problems.append(
+                f"templates/{t}: portfile.cmake needs a URLS line and a SHA512 line"
+            )
     bpath = os.path.join(root, "versions", "baseline.json")
     base = read_json(bpath)["default"] if os.path.exists(bpath) else {}
     for port in ports:
@@ -382,7 +407,7 @@ def self_test():
         raises(
             lambda: bump(repo, "lib", "v1.4.0", base),
             "asset not in SHA256SUMS",
-            "SHA256SUMS",
+            "release lists",
         )
         raises(
             lambda: bump(repo, "lib", "v1.5.0", base),
@@ -429,6 +454,9 @@ def self_test():
             f.write(b"new")
         with open(os.path.join(d, "SHA256SUMS"), "w") as f:
             f.write(f"{hashlib.sha256(b'new').hexdigest()}  next-0.1.0.tar.gz\n")
+        os.rename(
+            os.path.join(d, "SHA256SUMS"), os.path.join(d, "next-0.1.0.tar.gz.sha256")
+        )
         r = bump(repo, "next", "v0.1.0", base)
         expect(
             r["new"] and os.path.isdir(os.path.join(repo, "ports/next")),

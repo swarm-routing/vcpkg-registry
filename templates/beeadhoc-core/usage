@@ -1,0 +1,6 @@
+beeadhoc-core provides CMake targets:
+
+    find_package(beeadhoc-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE beeadhoc::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "beeadhoc-config.h" (include/beeadhoc-core/).

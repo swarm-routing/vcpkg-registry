@@ -7,7 +7,7 @@ before changing anything. Org-wide conventions:
 
 ## What this repo is
 
-**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the protocol cores follow (swarm-routing/.github#436).** Epic: swarm-routing/.github#436.
+**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the five protocol cores wait in `templates/` for their first release with a CMake package (swarm-routing/.github#436).** Epic: swarm-routing/.github#436.
 
 The swarm-routing org's [vcpkg git registry](https://learn.microsoft.com/vcpkg/maintainers/registries):
 one port per simulator-free C++ core the org releases (`swarm-core` first,
@@ -22,7 +22,7 @@ release lock, not through this registry (CONTRIBUTING "Dependencies").
 ```
 ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core today)
 versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
-templates/<port>/    (planned: the protocol cores) a port not released yet: moved into ports/ on its first release
+templates/<port>/    a port not released yet (ara-core, beeadhoc-core, termite-core, hopnet-core, anthocnet-core): moved into ports/ on its first release
 tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/
 test/consumer/       the scratch project CI builds with find_package against every port
 .github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions
