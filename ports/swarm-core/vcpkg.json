@@ -1,7 +1,7 @@
 {
   "name": "swarm-core",
   "version-semver": "0.4.0",
-  "description": "Simulator-free C++20 primitives shared by the swarm-routing protocols: visited path, little-endian wire helpers, pheromone table, roulette selection, route decision, link metrics and the router observer (the core/ of swarm-routing/ns3-swarm-core).",
+  "description": "swarm-core, the shared ns-3 contrib module every swarm-routing protocol links against: simulator-agnostic C++23 primitives (visited path, little-endian wire helpers, pheromone table, route decision, link metrics) and the ns-3 glue they need.",
   "homepage": "https://github.com/swarm-routing/ns3-swarm-core",
   "license": "MIT OR GPL-2.0-only",
   "dependencies": [
@@ -13,5 +13,6 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "port-version": 1
 }

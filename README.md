@@ -15,9 +15,13 @@ release asset, checked by its SHA512, and installs the library as a CMake
 package. CI installs every port on `x64-linux` and `wasm32-emscripten` and
 builds a `find_package` consumer (epic swarm-routing/.github#436).
 
-| Port | Library | Package and target | Source |
-|------|---------|--------------------|--------|
-| `swarm-core` | the shared swarm-routing primitives (`core/` of [ns3-swarm-core](https://github.com/swarm-routing/ns3-swarm-core)), C++20 | `find_package(swarm-core CONFIG REQUIRED)`, `swarm::core` | `swarm-core-<ver>.tar.gz` of each release |
+| Port | Version | Library | Package and target | Source |
+|------|---------|---------|--------------------|--------|
+| `swarm-core` | [![vcpkg: swarm-core](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fswarm-core%2Fvcpkg.json&query=%24%5B%22version-semver%22%5D&label=vcpkg%20swarm-core)](ports/swarm-core) | the shared swarm-routing primitives (`core/` of [ns3-swarm-core](https://github.com/swarm-routing/ns3-swarm-core)), C++20 | `find_package(swarm-core CONFIG REQUIRED)`, `swarm::core` | `swarm-core-<ver>.tar.gz` of each release |
+
+Each port's description is its upstream repository's GitHub description
+(declared as code there), written by `tools/port_bump.py` at every bump
+(`refresh` re-reads it between releases), so it cannot go stale.
 
 The protocol cores follow, each on the `swarm-core` port: their ports wait
 in `templates/` and move into `ports/` by themselves on the first release of

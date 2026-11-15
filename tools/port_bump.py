@@ -4,6 +4,7 @@
 """Render a port bump from a published release, and check the versions database.
 
     port_bump.py bump --port NAME --tag vX.Y.Z [--root DIR] [--base-url URL]
+    port_bump.py refresh --port NAME [--root DIR] [--base-url URL]
     port_bump.py check [--root DIR]
     port_bump.py --self-test
 
@@ -21,6 +22,11 @@ Nothing is typed: every hash comes from the asset or from git. Run it at the
 root of a checkout of this repository; the release automation
 (swarm-routing/.github reusable-release.yml, `vcpkg-ports`) runs exactly this,
 then commits and opens the PR.
+
+The port's description is its upstream repository's GitHub description
+(declared as code in that repository's `[settings] description`), read at
+each bump; `refresh` re-reads it between releases and records a change as
+the next port-version.
 
 check: every port's vcpkg.json version is the baseline's, and its versions
 file records that version with the git-tree of ports/<port> as it is in the
@@ -145,6 +151,41 @@ def asset_url(portfile_text, version, base_url):
     return url
 
 
+def upstream_description(url, base_url=""):
+    """The description of the repository the release asset comes from: its
+    GitHub description, which swarm-routing declares as code
+    (`[settings] description` in that repository's .github/org-sync.toml), so
+    a port's description is never typed here and cannot go stale."""
+    m = re.match(
+        r"^(?:https://github\.com|"
+        + re.escape(base_url.rstrip("/") or "-")
+        + r")/([^/]+)/([^/]+)/",
+        url,
+    )
+    if not m:
+        raise Failure(f"{url}: not a GitHub release asset URL")
+    api = (base_url.rstrip("/") + "/api") if base_url else "https://api.github.com"
+    req = urllib.request.Request(
+        f"{api}/repos/{m.group(1)}/{m.group(2)}",
+        headers={"Accept": "application/vnd.github+json"},
+    )
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token and not base_url:
+        req.add_header("Authorization", f"Bearer {token}")
+    try:
+        with urllib.request.urlopen(
+            req, timeout=60
+        ) as r:  # https, or the self-test's file://
+            desc = json.load(r).get("description") or ""
+    except (OSError, ValueError) as e:
+        raise Failure(
+            f"cannot read {m.group(1)}/{m.group(2)}'s description: {e}"
+        ) from None
+    if not desc.strip():
+        raise Failure(f"{m.group(1)}/{m.group(2)} has no description")
+    return desc.strip()
+
+
 def bump(root, port, tag, base_url=""):
     if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
         raise Failure(f"{tag}: a release tag is vX.Y.Z")
@@ -183,6 +224,7 @@ def bump(root, port, tag, base_url=""):
     )
     manifest[key] = version
     manifest.pop("port-version", None)
+    manifest["description"] = upstream_description(url, base_url)
 
     # Written now; undone if the recorded tree for this version disagrees.
     old = {}
@@ -231,6 +273,48 @@ def bump(root, port, tag, base_url=""):
         "git_tree": tree,
         "sha512": sha512,
         "new": created,
+    }
+
+
+def refresh(root, port, base_url=""):
+    """Re-read the port's description from its upstream repository; when it
+    changed, record the change as the next port-version of the same release
+    (vcpkg needs a new port-version for any change at one version)."""
+    pdir = os.path.join(root, "ports", port)
+    if not os.path.isdir(pdir):
+        raise Failure(f"no ports/{port}")
+    mpath = os.path.join(pdir, "vcpkg.json")
+    manifest = read_json(mpath)
+    key = version_key(manifest)
+    version = manifest[key]
+    url = asset_url(read_text(os.path.join(pdir, "portfile.cmake")), version, base_url)
+    desc = upstream_description(url, base_url)
+    if manifest.get("description") == desc:
+        print(f"port_bump: {port} {version}: description current", file=sys.stderr)
+        return {"port": port, "version": version, "changed": False}
+    pv = manifest.get("port-version", 0) + 1
+    manifest["description"] = desc
+    manifest["port-version"] = pv
+    write_json(mpath, manifest)
+    tree = git_tree(root, port)
+    vpath = versions_file(root, port)
+    db = read_json(vpath)
+    db["versions"].insert(0, {key: version, "port-version": pv, "git-tree": tree})
+    write_json(vpath, db)
+    bpath = os.path.join(root, "versions", "baseline.json")
+    base = read_json(bpath)
+    base["default"][port] = {"baseline": version, "port-version": pv}
+    write_json(bpath, base)
+    print(
+        f"port_bump: {port} {version}#{pv}: description from upstream, git-tree {tree}",
+        file=sys.stderr,
+    )
+    return {
+        "port": port,
+        "version": version,
+        "port_version": pv,
+        "git_tree": tree,
+        "changed": True,
     }
 
 
@@ -318,6 +402,14 @@ def self_test():
             "commit.gpgsign=false",
         ]
         git(repo, "init", "-q")
+
+        def describe(repo_name, text):
+            d = os.path.join(rel, "api", "repos", "o")
+            os.makedirs(d, exist_ok=True)
+            write_json(os.path.join(d, repo_name), {"description": text})
+
+        describe("lib", "lib, a C++23 library")
+        describe("next", "next, the next one")
 
         def release(version, data, sums_ok=True):
             d = os.path.join(rel, "o", "lib", "releases", "download", f"v{version}")
@@ -467,6 +559,35 @@ def self_test():
             "template moved, not copied",
         )
         expect(check(repo) == 0, "check passes with two ports")
+        expect(
+            read_json(os.path.join(repo, "ports/lib/vcpkg.json"))["description"]
+            == "lib, a C++23 library",
+            "the description comes from the upstream repository",
+        )
+        r = refresh(repo, "lib", base)
+        expect(not r["changed"], "refresh: an unchanged description writes nothing")
+        describe("lib", "lib, a C++26 library")
+        r = refresh(repo, "lib", base)
+        m = read_json(os.path.join(repo, "ports/lib/vcpkg.json"))
+        expect(
+            r["changed"]
+            and m["port-version"] == 1
+            and m["description"] == "lib, a C++26 library",
+            "refresh: a changed description is the next port-version",
+        )
+        expect(
+            read_json(os.path.join(repo, "versions/baseline.json"))["default"]["lib"][
+                "port-version"
+            ]
+            == 1
+            and check(repo) == 0,
+            "refresh: the baseline and versions/ follow; check passes",
+        )
+        raises(
+            lambda: bump(repo, "lib", "v1.3.0", base),
+            "a bump after a refresh keeps the port-version",
+            "port-version 1",
+        )
         base_db = read_json(os.path.join(repo, "versions/baseline.json"))["default"]
         expect(list(base_db) == ["lib", "next"], "baseline sorted")
 
@@ -492,6 +613,12 @@ def main(argv=None):
         action="store_true",
         help="print the result as JSON (for the release job)",
     )
+    f = sub.add_parser(
+        "refresh", help="the port's description from its upstream repository"
+    )
+    f.add_argument("--port", required=True)
+    f.add_argument("--root", default=".")
+    f.add_argument("--base-url", default="")
     c = sub.add_parser("check", help="versions/ matches ports/")
     c.add_argument("--root", default=".")
     a = ap.parse_args(argv)
@@ -501,6 +628,9 @@ def main(argv=None):
         r = bump(os.path.abspath(a.root), a.port, a.tag, a.base_url)
         if a.json:
             print(json.dumps(r))
+        return 0
+    if a.cmd == "refresh":
+        refresh(os.path.abspath(a.root), a.port, a.base_url)
         return 0
     if a.cmd == "check":
         return check(os.path.abspath(a.root))
