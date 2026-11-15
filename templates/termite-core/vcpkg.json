@@ -1,0 +1,18 @@
+{
+  "name": "termite-core",
+  "version-semver": "0.0.0",
+  "description": "The simulator-free C++ core of Termite, routing by stigmergy (Roth & Wicker, 2003/2005), from swarm-routing/Termite's core/.",
+  "homepage": "https://github.com/swarm-routing/Termite",
+  "license": "MIT OR GPL-2.0-only",
+  "dependencies": [
+    "swarm-core",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

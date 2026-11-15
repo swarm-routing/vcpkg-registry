@@ -1,0 +1,6 @@
+hopnet-core provides CMake targets:
+
+    find_package(hopnet-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE hopnet::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "hopnet-config.h" (include/hopnet-core/).

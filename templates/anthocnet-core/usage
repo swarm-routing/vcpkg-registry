@@ -1,0 +1,6 @@
+anthocnet-core provides CMake targets:
+
+    find_package(anthocnet-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE anthocnet::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "anthocnet/core/ant_router_logic.h".

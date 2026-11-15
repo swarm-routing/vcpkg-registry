@@ -19,8 +19,18 @@ builds a `find_package` consumer (epic swarm-routing/.github#436).
 |------|---------|--------------------|--------|
 | `swarm-core` | the shared swarm-routing primitives (`core/` of [ns3-swarm-core](https://github.com/swarm-routing/ns3-swarm-core)), C++20 | `find_package(swarm-core CONFIG REQUIRED)`, `swarm::core` | `swarm-core-<ver>.tar.gz` of each release |
 
-The protocol cores (ARA, BeeAdHoc, Termite, HOPNET, AntHocNet) follow once
-each installs as a CMake package (epic swarm-routing/.github#436).
+The protocol cores follow, each on the `swarm-core` port: their ports wait
+in `templates/` and move into `ports/` by themselves on the first release of
+each repository that installs `core/` as a CMake package (epic
+swarm-routing/.github#436):
+
+| Template | Package and target | Waits for |
+|----------|--------------------|-----------|
+| `ara-core` | `find_package(ara-core CONFIG REQUIRED)`, `ara::core` | swarm-routing/ARA#167, then an ARA release |
+| `beeadhoc-core` | `beeadhoc-core`, `beeadhoc::core` | swarm-routing/BeeAdHoc#142, then a release |
+| `termite-core` | `termite-core`, `termite::core` | swarm-routing/Termite#135, then a release |
+| `hopnet-core` | `hopnet-core`, `hopnet::core` | swarm-routing/HOPNET#143, then a release |
+| `anthocnet-core` | `anthocnet-core`, `anthocnet::core` | swarm-routing/AntHocNet#1037, then a release (its `anthocnet-<ver>.zip`, checked against `<asset>.sha256`) |
 
 ## Use the registry
 
