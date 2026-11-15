@@ -77,8 +77,10 @@ For WebAssembly, the community triplet with emsdk active:
 Before 1.0, any minor release of swarm-core may break its API
 ([its API policy](https://github.com/swarm-routing/ns3-swarm-core/blob/main/docs/api-policy.md)),
 and the installed package's version file accepts the same `0.y` minor only
-(`find_package(swarm-core 0.3 CONFIG)`). Pin the version with `overrides` (or a
-`version>=` constraint and a baseline you move on purpose) until 1.0.
+(`find_package(swarm-core 0.3 CONFIG)`). Pin the exact version with
+`overrides`, as above, until 1.0. A `version>=` constraint with a baseline
+only sets a minimum: vcpkg may still pick a newer minor that another
+dependency asks for, so it does not protect you from a breaking 0.y.
 
 ## How a port is bumped
 

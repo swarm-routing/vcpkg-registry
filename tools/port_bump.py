@@ -126,17 +126,26 @@ def bump(root, port, tag, base_url=""):
         raise Failure(f"{tag}: a release tag is vX.Y.Z")
     version = tag[1:]
     pdir = os.path.join(root, "ports", port)
-    created = False
-    if not os.path.isdir(pdir):
-        tdir = os.path.join(root, "templates", port)
-        if not os.path.isdir(tdir):
-            raise Failure(f"no ports/{port} and no templates/{port}")
-        shutil.copytree(tdir, pdir)
-        shutil.rmtree(tdir)
-        created = True
-    portfile = os.path.join(pdir, "portfile.cmake")
-    with open(portfile, encoding="utf-8") as f:
-        text = f.read()
+    tdir = os.path.join(root, "templates", port)
+    created = not os.path.isdir(pdir)
+    src = tdir if created else pdir
+    if not os.path.isdir(src):
+        raise Failure(f"no ports/{port} and no templates/{port}")
+    # Everything is validated before anything is written: the release, and
+    # that this version is not already recorded at a later port-version.
+    text = read_text(os.path.join(src, "portfile.cmake"))
+    manifest = read_json(os.path.join(src, "vcpkg.json"))
+    key = version_key(manifest)
+    vpath = versions_file(root, port)
+    db = read_json(vpath) if os.path.exists(vpath) else {"versions": []}
+    later = [
+        v for v in db["versions"] if v.get(key) == version and v.get("port-version", 0)
+    ]
+    if later:
+        raise Failure(
+            f"{port} {version} is already recorded at port-version "
+            f"{max(v['port-version'] for v in later)}; a bump to the same release would reset it"
+        )
     url = asset_url(text, version, base_url)
     asset = fetch(url)
     name = url.rsplit("/", 1)[1]
@@ -155,28 +164,37 @@ def bump(root, port, tag, base_url=""):
     text = SHA512_RE.sub(
         lambda m: m.group(1) + hashlib.sha512(asset).hexdigest(), text, count=1
     )
-    with open(portfile, "w", encoding="utf-8") as f:
-        f.write(text)
-
-    mpath = os.path.join(pdir, "vcpkg.json")
-    manifest = read_json(mpath)
-    key = version_key(manifest)
     manifest[key] = version
     manifest.pop("port-version", None)
-    write_json(mpath, manifest)
-    tree = git_tree(root, port)
 
-    vpath = versions_file(root, port)
-    db = read_json(vpath) if os.path.exists(vpath) else {"versions": []}
-    for v in db["versions"]:
-        if v.get(key) == version and v.get("port-version", 0) == 0:
-            if v["git-tree"] != tree:
-                raise Failure(
-                    f"{port} {version} is already recorded with another git-tree "
-                    f"({v['git-tree']}); a port change at the same version needs a port-version"
-                )
-            break
+    # Written now; undone if the recorded tree for this version disagrees.
+    old = {}
+    if created:
+        shutil.copytree(tdir, pdir)
     else:
+        old = {
+            f: read_text(os.path.join(pdir, f))
+            for f in ("portfile.cmake", "vcpkg.json")
+        }
+    with open(os.path.join(pdir, "portfile.cmake"), "w", encoding="utf-8") as f:
+        f.write(text)
+    write_json(os.path.join(pdir, "vcpkg.json"), manifest)
+    tree = git_tree(root, port)
+    for v in db["versions"]:
+        if v.get(key) == version and v["git-tree"] != tree:
+            if created:
+                shutil.rmtree(pdir)
+            for f, body in old.items():
+                with open(os.path.join(pdir, f), "w", encoding="utf-8") as out:
+                    out.write(body)
+            raise Failure(
+                f"{port} {version} is already recorded with another git-tree "
+                f"({v['git-tree']}); a port change at the same version needs a port-version"
+            )
+    if created:
+        shutil.rmtree(tdir)
+
+    if not any(v.get(key) == version for v in db["versions"]):
         db["versions"].insert(0, {key: version, "port-version": 0, "git-tree": tree})
     write_json(vpath, db)
     bpath = os.path.join(root, "versions", "baseline.json")
@@ -352,6 +370,12 @@ def self_test():
             "same version, other tree",
             "port-version",
         )
+        expect(
+            "1.3.0" in read_text(os.path.join(repo, "ports/lib/vcpkg.json"))
+            and hashlib.sha512(b"two").hexdigest()
+            in read_text(os.path.join(repo, "ports/lib/portfile.cmake")),
+            "a refused bump restores the port's files",
+        )
         os.remove(os.path.join(repo, "ports/lib/usage"))
 
         release("1.4.0", b"three", sums_ok=False)
@@ -370,6 +394,34 @@ def self_test():
             lambda: bump(repo, "nope", "v1.3.0", base), "unknown port", "no ports/nope"
         )
         git(repo, "checkout", "-q", "--", ".")
+
+        raises(
+            lambda: bump(repo, "next", "v0.1.0", base),
+            "a new port's release missing",
+            "cannot download",
+        )
+        expect(
+            os.path.isdir(os.path.join(repo, "templates/next"))
+            and not os.path.exists(os.path.join(repo, "ports/next")),
+            "a failed first bump keeps the template, writes no port",
+        )
+        vf = os.path.join(repo, "versions/l-/lib.json")
+        saved = read_text(vf)
+        db = read_json(vf)
+        db["versions"].insert(0, {**db["versions"][0], "port-version": 1})
+        write_json(vf, db)
+        pf_before = read_text(os.path.join(repo, "ports/lib/portfile.cmake"))
+        raises(
+            lambda: bump(repo, "lib", "v1.3.0", base),
+            "a recorded port-version is not reset",
+            "port-version 1",
+        )
+        expect(
+            read_text(os.path.join(repo, "ports/lib/portfile.cmake")) == pf_before,
+            "the refusal writes nothing",
+        )
+        with open(vf, "w", encoding="utf-8") as f:
+            f.write(saved)
 
         d = os.path.join(rel, "o", "next", "releases", "download", "v0.1.0")
         os.makedirs(d)

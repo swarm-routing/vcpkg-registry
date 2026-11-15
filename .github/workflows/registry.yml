@@ -109,6 +109,8 @@ jobs:
           grep -q 'is correctly in the version database' <<<"$out" || { echo "::error::no port verified"; bad=1; }
           exit "$bad"
       - name: Install every port from this registry and build the consumer
+        # recent runs: ~1 min (x64-linux), ~2 min (wasm32-emscripten)
+        timeout-minutes: 20
         env:
           TRIPLET: ${{ matrix.triplet }}
         run: |

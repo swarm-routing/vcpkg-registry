@@ -42,7 +42,10 @@ vcpkg itself (as `.github/workflows/registry.yml`; a partial clone is ~150 MB):
 ```bash
 git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git ../vcpkg
 git -C ../vcpkg checkout <VCPKG_COMMIT from registry.yml> && ../vcpkg/bootstrap-vcpkg.sh -disableMetrics
-../vcpkg/vcpkg x-ci-verify-versions --verbose --verify-git-trees --x-builtin-ports-root=./ports --x-builtin-registry-versions-dir=./versions
+# vcpkg reports our ports' builtin helper dependencies (vcpkg-cmake, vcpkg-cmake-config) as missing
+# from our database; CI accepts exactly that error. Empty output from the second line is a pass:
+../vcpkg/vcpkg x-ci-verify-versions --verbose --verify-git-trees --x-builtin-ports-root=./ports --x-builtin-registry-versions-dir=./versions \
+  | grep ': error:' | grep -Ev 'error: the dependency vcpkg-cmake(-config)? does not exist in the version database'
 # the consumer: copy test/consumer/, add a vcpkg-configuration.json naming this checkout as a git
 # registry at a committed HEAD (the CI step writes it), then cmake with the vcpkg toolchain file
 ```
