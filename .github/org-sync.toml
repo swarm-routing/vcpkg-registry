@@ -1,0 +1,19 @@
+# org-sync configuration (swarm-routing/.github tools/org-sync).
+kind = "python"
+title = "vcpkg-registry"
+dual = [""]
+posture = "standalone packaging tooling: vcpkg port files (CMake) and a stdlib Python renderer, no simulation code"
+
+[docs]
+arena_id = ""  # its id in swarm-routing.github.io site/hub/projects.json, once listed
+
+[settings]
+# GitHub settings as code: swarm-routing/.github tools/repo-settings (swarm-routing/.github#117).
+description = "The swarm-routing org's vcpkg git registry: ports of the simulator-free C++ cores (swarm-core first, then each protocol's core), the versions database, and CI that installs every port on x64-linux and wasm32-emscripten."
+homepage = ""
+topics = ["vcpkg", "vcpkg-registry", "cpp", "cmake", "package-manager", "webassembly", "swarm-intelligence", "routing-protocol"]
+ruleset = "tooling"
+required_checks = ["headers / licence", "check / org-sync", "title / title", "review / coderabbit"]
+# Merge through a merge queue (swarm-routing/.github#130); every workflow behind a required
+# check also runs on merge_group.
+merge_queue = true

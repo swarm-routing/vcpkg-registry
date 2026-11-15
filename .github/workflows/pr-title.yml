@@ -1,0 +1,16 @@
+# Copyright (c) 2026 Daniel Joppi (https://github.com/swarm-routing)
+# SPDX-License-Identifier: MIT OR GPL-2.0-only
+name: PR title
+
+# The squash title is the commit on main: a lowercase Conventional Commit
+# (swarm-routing/.github CONTRIBUTING.md).
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+  merge_group:  # the merge queue runs the required checks on each group (swarm-routing/.github#130)
+
+permissions: {}
+
+jobs:
+  title:
+    uses: swarm-routing/.github/.github/workflows/reusable-pr-title.yml@main
