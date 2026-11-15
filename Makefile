@@ -28,10 +28,10 @@ test: ## the fast tests CI runs on every PR
 	@if [ -f tools/port_bump.py ]; then python3 -I tools/port_bump.py --self-test && python3 -I tools/port_bump.py check; else echo "no tests yet"; fi
 
 lint: ## static checks, no changes
-	ruff check tools && ruff format --check tools
+	@if [ -d tools ]; then ruff check tools && ruff format --check tools; else echo "no tools/ yet"; fi
 
 format: ## apply the formatters
-	ruff format tools
+	@if [ -d tools ]; then ruff format tools; else echo "no tools/ yet"; fi
 
 clean: ## remove build outputs
 	rm -rf build dist *.egg-info .pytest_cache
