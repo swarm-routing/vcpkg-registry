@@ -45,12 +45,17 @@ import urllib.request
 
 VERSION_KEYS = ("version-semver", "version", "version-date", "version-string")
 URLS_RE = re.compile(r'URLS\s+"([^"]+)"')
-SHA512_RE = re.compile(r"^(\s*SHA512\s+)([0-9a-fA-F]+)\s*$", re.M)
+SHA512_RE = re.compile(r"^(\s*SHA512\s+)([0-9a-fA-F]+)\s*$", re.MULTILINE)
 
 
 class Failure(SystemExit):
     def __init__(self, msg):
         super().__init__(f"port_bump: {msg}")
+
+
+def read_text(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
 
 
 def read_json(path):
@@ -96,7 +101,7 @@ def git_tree(root, port):
 
 def fetch(url):
     try:
-        with urllib.request.urlopen(url, timeout=120) as r:  # noqa: S310 (https or the self-test's file://)
+        with urllib.request.urlopen(url, timeout=120) as r:  # https, or the self-test's file://
             return r.read()
     except OSError as e:
         raise Failure(f"cannot download {url}: {e}") from None
@@ -273,7 +278,7 @@ def self_test():
         git(repo, *env_git, "add", "-A")
         git(repo, *env_git, "commit", "-qm", "1.2.0")
         expect(r["git_tree"] == git(repo, "rev-parse", "HEAD:ports/lib"), "git-tree is git's own")
-        pf = open(os.path.join(repo, "ports/lib/portfile.cmake")).read()
+        pf = read_text(os.path.join(repo, "ports/lib/portfile.cmake"))
         expect(hashlib.sha512(b"one").hexdigest() in pf, "SHA512 of the asset in the portfile")
         m = read_json(os.path.join(repo, "ports/lib/vcpkg.json"))
         expect(
@@ -293,10 +298,10 @@ def self_test():
         )
         git(repo, *env_git, "add", "-A")
         git(repo, *env_git, "commit", "-qm", "1.3.0")
-        before = open(os.path.join(repo, "versions/l-/lib.json")).read()
+        before = read_text(os.path.join(repo, "versions/l-/lib.json"))
         bump(repo, "lib", "v1.3.0", base)
         expect(
-            open(os.path.join(repo, "versions/l-/lib.json")).read() == before,
+            read_text(os.path.join(repo, "versions/l-/lib.json")) == before,
             "re-run is idempotent",
         )
 
