@@ -22,7 +22,8 @@ release lock, not through this registry (CONTRIBUTING "Dependencies").
 ```
 ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core today)
 versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
-templates/<port>/    a port not released yet (ara-core, beeadhoc-core, termite-core, hopnet-core, anthocnet-core): moved into ports/ on its first release
+templates/<port>/    a port not released yet (ara-core, beeadhoc-core, termite-core, hopnet-core, anthocnet-core): moved into ports/ on its
+                     repository's first release that installs core/ as a CMake package (earlier releases cannot build it)
 tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/
 test/consumer/       the scratch project CI builds with find_package against every port
 .github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions
