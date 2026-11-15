@@ -51,7 +51,7 @@ and depend on the port in `vcpkg.json`:
 ```json
 {
   "dependencies": ["swarm-core"],
-  "overrides": [{ "name": "swarm-core", "version": "0.3.0" }]
+  "overrides": [{ "name": "swarm-core", "version": "0.4.0" }]
 }
 ```
 
@@ -77,7 +77,7 @@ For WebAssembly, the community triplet with emsdk active:
 Before 1.0, any minor release of swarm-core may break its API
 ([its API policy](https://github.com/swarm-routing/ns3-swarm-core/blob/main/docs/api-policy.md)),
 and the installed package's version file accepts the same `0.y` minor only
-(`find_package(swarm-core 0.3 CONFIG)`). Pin the exact version with
+(`find_package(swarm-core 0.4 CONFIG)`). Pin the exact version with
 `overrides`, as above, until 1.0. A `version>=` constraint with a baseline
 only sets a minimum: vcpkg may still pick a newer minor that another
 dependency asks for, so it does not protect you from a breaking 0.y.
@@ -88,7 +88,7 @@ Never by hand. When a library publishes a release, its release workflow
 (swarm-routing/.github `reusable-release.yml`, input `vcpkg-ports`) runs
 
 ```bash
-python3 -I tools/port_bump.py bump --port swarm-core --tag v0.3.0
+python3 -I tools/port_bump.py bump --port swarm-core --tag v0.4.0
 ```
 
 in a checkout of this repository, which downloads the release asset named in

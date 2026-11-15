@@ -11,7 +11,7 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_download_distfile(ARCHIVE
     URLS "https://github.com/swarm-routing/ns3-swarm-core/releases/download/v${VERSION}/swarm-core-${VERSION}.tar.gz"
     FILENAME "swarm-core-${VERSION}.tar.gz"
-    SHA512 091b52c776c55d1bc96c1bac766b96e0d8c68a5f8ab1b65ff38b3ae53e030fbec39b28258b12217be85e73e9a8df742cdf9fcba8afe2144686ad239fc8fa69a5
+    SHA512 6d4dd2ad395ea8f76e515b76f87b3c7f8be091f4fbffd9b0c23de5770c1a6c40f2dcb92d5447aff64171b40709efaa3bcfc5d6559230e1b3fef21a87c029d839
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 
