@@ -73,7 +73,9 @@ def write_json(path, data):
 def version_key(manifest):
     keys = [k for k in VERSION_KEYS if k in manifest]
     if len(keys) != 1:
-        raise Failure(f"{manifest.get('name')}: exactly one of {', '.join(VERSION_KEYS)} expected")
+        raise Failure(
+            f"{manifest.get('name')}: exactly one of {', '.join(VERSION_KEYS)} expected"
+        )
     return keys[0]
 
 
@@ -101,7 +103,9 @@ def git_tree(root, port):
 
 def fetch(url):
     try:
-        with urllib.request.urlopen(url, timeout=120) as r:  # https, or the self-test's file://
+        with urllib.request.urlopen(
+            url, timeout=120
+        ) as r:  # https, or the self-test's file://
             return r.read()
     except OSError as e:
         raise Failure(f"cannot download {url}: {e}") from None
@@ -137,12 +141,20 @@ def bump(root, port, tag, base_url=""):
     asset = fetch(url)
     name = url.rsplit("/", 1)[1]
     sums = fetch(url.rsplit("/", 1)[0] + "/SHA256SUMS").decode()
-    listed = {ln.split()[1].lstrip("*"): ln.split()[0] for ln in sums.splitlines() if ln.strip()}
+    listed = {
+        ln.split()[1].lstrip("*"): ln.split()[0]
+        for ln in sums.splitlines()
+        if ln.strip()
+    }
     if listed.get(name) != hashlib.sha256(asset).hexdigest():
-        raise Failure(f"{name}: its sha256 is not the one the release's SHA256SUMS lists")
+        raise Failure(
+            f"{name}: its sha256 is not the one the release's SHA256SUMS lists"
+        )
     if not SHA512_RE.search(text):
         raise Failure("portfile.cmake: no SHA512 line")
-    text = SHA512_RE.sub(lambda m: m.group(1) + hashlib.sha512(asset).hexdigest(), text, count=1)
+    text = SHA512_RE.sub(
+        lambda m: m.group(1) + hashlib.sha512(asset).hexdigest(), text, count=1
+    )
     with open(portfile, "w", encoding="utf-8") as f:
         f.write(text)
 
@@ -178,7 +190,13 @@ def bump(root, port, tag, base_url=""):
         f"{name} sha512 {sha512[:16]}..., git-tree {tree}",
         file=sys.stderr,
     )
-    return {"port": port, "version": version, "git_tree": tree, "sha512": sha512, "new": created}
+    return {
+        "port": port,
+        "version": version,
+        "git_tree": tree,
+        "sha512": sha512,
+        "new": created,
+    }
 
 
 def check(root):
@@ -202,10 +220,16 @@ def check(root):
             problems.append(f"{port}: baseline {b} is not vcpkg.json's {version}#{pv}")
         vpath = versions_file(root, port)
         entries = read_json(vpath)["versions"] if os.path.exists(vpath) else []
-        hit = [e for e in entries if e.get(key) == version and e.get("port-version", 0) == pv]
+        hit = [
+            e
+            for e in entries
+            if e.get(key) == version and e.get("port-version", 0) == pv
+        ]
         tree = git_tree(root, port)
         if not hit:
-            problems.append(f"{port}: {version}#{pv} is not in {os.path.relpath(vpath, root)}")
+            problems.append(
+                f"{port}: {version}#{pv} is not in {os.path.relpath(vpath, root)}"
+            )
         elif hit[0]["git-tree"] != tree:
             problems.append(
                 f"{port}: {version}#{pv} records git-tree {hit[0]['git-tree']}, "
@@ -242,7 +266,14 @@ def self_test():
     with tempfile.TemporaryDirectory() as tmp:
         repo, rel = os.path.join(tmp, "repo"), os.path.join(tmp, "rel")
         os.makedirs(repo)
-        env_git = ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"]
+        env_git = [
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "commit.gpgsign=false",
+        ]
         git(repo, "init", "-q")
 
         def release(version, data, sums_ok=True):
@@ -277,9 +308,15 @@ def self_test():
         r = bump(repo, "lib", "v1.2.0", base)
         git(repo, *env_git, "add", "-A")
         git(repo, *env_git, "commit", "-qm", "1.2.0")
-        expect(r["git_tree"] == git(repo, "rev-parse", "HEAD:ports/lib"), "git-tree is git's own")
+        expect(
+            r["git_tree"] == git(repo, "rev-parse", "HEAD:ports/lib"),
+            "git-tree is git's own",
+        )
         pf = read_text(os.path.join(repo, "ports/lib/portfile.cmake"))
-        expect(hashlib.sha512(b"one").hexdigest() in pf, "SHA512 of the asset in the portfile")
+        expect(
+            hashlib.sha512(b"one").hexdigest() in pf,
+            "SHA512 of the asset in the portfile",
+        )
         m = read_json(os.path.join(repo, "ports/lib/vcpkg.json"))
         expect(
             m["version-semver"] == "1.2.0" and "port-version" not in m,
@@ -292,7 +329,9 @@ def self_test():
         db = read_json(os.path.join(repo, "versions/l-/lib.json"))["versions"]
         expect([v["version-semver"] for v in db] == ["1.3.0", "1.2.0"], "newest first")
         expect(
-            read_json(os.path.join(repo, "versions/baseline.json"))["default"]["lib"]["baseline"]
+            read_json(os.path.join(repo, "versions/baseline.json"))["default"]["lib"][
+                "baseline"
+            ]
             == "1.3.0",
             "baseline moved",
         )
@@ -309,15 +348,27 @@ def self_test():
             f.write("changed\n")
         expect(check(repo) == 1, "check fails on a port changed without a bump")
         raises(
-            lambda: bump(repo, "lib", "v1.3.0", base), "same version, other tree", "port-version"
+            lambda: bump(repo, "lib", "v1.3.0", base),
+            "same version, other tree",
+            "port-version",
         )
         os.remove(os.path.join(repo, "ports/lib/usage"))
 
         release("1.4.0", b"three", sums_ok=False)
-        raises(lambda: bump(repo, "lib", "v1.4.0", base), "asset not in SHA256SUMS", "SHA256SUMS")
-        raises(lambda: bump(repo, "lib", "v1.5.0", base), "no such release", "cannot download")
+        raises(
+            lambda: bump(repo, "lib", "v1.4.0", base),
+            "asset not in SHA256SUMS",
+            "SHA256SUMS",
+        )
+        raises(
+            lambda: bump(repo, "lib", "v1.5.0", base),
+            "no such release",
+            "cannot download",
+        )
         raises(lambda: bump(repo, "lib", "1.3.0", base), "tag without v", "vX.Y.Z")
-        raises(lambda: bump(repo, "nope", "v1.3.0", base), "unknown port", "no ports/nope")
+        raises(
+            lambda: bump(repo, "nope", "v1.3.0", base), "unknown port", "no ports/nope"
+        )
         git(repo, "checkout", "-q", "--", ".")
 
         d = os.path.join(rel, "o", "next", "releases", "download", "v0.1.0")
@@ -332,7 +383,8 @@ def self_test():
             "a new port from templates/",
         )
         expect(
-            not os.path.exists(os.path.join(repo, "templates/next")), "template moved, not copied"
+            not os.path.exists(os.path.join(repo, "templates/next")),
+            "template moved, not copied",
         )
         expect(check(repo) == 0, "check passes with two ports")
         base_db = read_json(os.path.join(repo, "versions/baseline.json"))["default"]
@@ -352,9 +404,13 @@ def main(argv=None):
     b.add_argument("--port", required=True)
     b.add_argument("--tag", required=True)
     b.add_argument("--root", default=".")
-    b.add_argument("--base-url", default="", help="replaces https://github.com/ in the asset URL")
     b.add_argument(
-        "--json", action="store_true", help="print the result as JSON (for the release job)"
+        "--base-url", default="", help="replaces https://github.com/ in the asset URL"
+    )
+    b.add_argument(
+        "--json",
+        action="store_true",
+        help="print the result as JSON (for the release job)",
     )
     c = sub.add_parser("check", help="versions/ matches ports/")
     c.add_argument("--root", default=".")
