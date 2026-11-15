@@ -1,6 +1,6 @@
 {
   "name": "swarm-core",
-  "version-semver": "0.3.0",
+  "version-semver": "0.4.0",
   "description": "Simulator-free C++20 primitives shared by the swarm-routing protocols: visited path, little-endian wire helpers, pheromone table, roulette selection, route decision, link metrics and the router observer (the core/ of swarm-routing/ns3-swarm-core).",
   "homepage": "https://github.com/swarm-routing/ns3-swarm-core",
   "license": "MIT OR GPL-2.0-only",
