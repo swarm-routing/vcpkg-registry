@@ -91,8 +91,11 @@ cmake -S "$work" -B "$work/build" -G Ninja \
 cmake --build "$work/build" && "$work/build/consumer"
 ```
 
-CI lists every directory under `ports/` in `packages` and in the
-consumer's `vcpkg.json`; with one port that is `swarm-core`. For
+`x64-linux` is CI's triplet. On macOS pick the native one instead,
+`-DVCPKG_TARGET_TRIPLET=arm64-osx` on Apple silicon or `x64-osx` on Intel,
+and the consumer runs the same way. CI lists every directory under `ports/`
+in `packages` and in the consumer's `vcpkg.json`; with one port that is
+`swarm-core`. For
 WebAssembly, activate emsdk, use `-DVCPKG_TARGET_TRIPLET=wasm32-emscripten
 -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"`
 and run `node "$work/build/consumer.js"`.
@@ -130,7 +133,7 @@ make check     # lint, test, headers and org-sync together (everything CI gates 
 | `licence.yml` | `headers / licence` | licence headers | yes |
 | `org-sync.yml` | `check / org-sync` | the org-managed files match the templates | yes |
 | `pr-title.yml` | `title / title` | the PR title is a lowercase Conventional Commit | yes |
-| `review-gate.yml` | `review / coderabbit` | CodeRabbit has reviewed the PR | yes |
+| `review-gate.yml` | `review / coderabbit` | the review gate: passes once CodeRabbit has reviewed the PR or said it will not, for a draft, or 30 minutes after the PR opened; a pass is not proof of a review, so read the threads | yes |
 | `dco.yml`, `scorecard.yml`, `sync-labels.yml` | | sign-off on outside contributions; OpenSSF Scorecard; labels | no |
 
 The required checks are the ones the `main` ruleset lists: `gh api
@@ -153,11 +156,17 @@ release that installs `core/` as a CMake package.
 - **`x-ci-verify-versions` reports `vcpkg-cmake` or `vcpkg-cmake-config`
   missing from the version database.** Expected: they are vcpkg's builtin
   helpers, not ours, and CI accepts exactly that error. Filter it with
-  `| grep ': error:' | grep -Ev 'error: the dependency vcpkg-cmake(-config)? does not exist in the version database'`;
-  empty output is a pass.
-- **`check` or vcpkg says a `git-tree` does not match.** The port's files
-  changed after `versions/` was written; render the bump (or `refresh`)
-  again, never edit the hash.
+  `| grep ': error:' | grep -Ev 'error: the dependency vcpkg-cmake(-config)? does not exist in the version database'`.
+  A pass is empty output from that filter *and* at least one line saying a
+  port `is correctly in the version database` in the unfiltered output, as
+  CI requires: a run that verified no port also prints no error.
+- **`check` or vcpkg says a `git-tree` does not match.** A port's files
+  changed after its version was recorded. If the change was not meant,
+  revert it. A deliberate change at the same version needs a new
+  `port-version`, which `port_bump.py` records only for a changed
+  description (`refresh`); `bump` refuses another tree for a recorded
+  version. Any other such change needs an issue first; never edit a hash by
+  hand.
 - **The consumer resolves an old port version.** The registry's `baseline`
   is a commit; the change must be committed and the baseline must be that
   commit (`git rev-parse HEAD`).
