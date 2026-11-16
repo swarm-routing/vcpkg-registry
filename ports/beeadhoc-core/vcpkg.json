@@ -1,7 +1,7 @@
 {
   "name": "beeadhoc-core",
-  "version-semver": "0.0.0",
-  "description": "The simulator-free C++ core of BeeAdHoc, the honeybee-inspired routing protocol of Wedde & Farooq (2005), from swarm-routing/BeeAdHoc's core/.",
+  "version-semver": "0.2.0",
+  "description": "BeeAdHoc, the honeybee-inspired routing protocol of Wedde & Farooq (2005), as a standalone swarm routing protocol for MANETs: scouts, foragers and an energy metric, as a planned simulator-agnostic C++ core and ns-3 contrib module on swarm-core.",
   "homepage": "https://github.com/swarm-routing/BeeAdHoc",
   "license": "MIT OR GPL-2.0-only",
   "dependencies": [
