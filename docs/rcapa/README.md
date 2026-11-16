@@ -16,9 +16,11 @@ What this repository publishes is the **registry on `main`**: the
 `ports/` and the `versions/` database vcpkg reads (a consumer pins a
 `baseline` commit of this repository). Today: `swarm-core`, `ara-core` and
 `beeadhoc-core`; the other cores wait in `templates/`. There are no `v*`
-tags. A regression is a port version that installed and stopped installing,
-or installs something different from its release asset, after a change
-here. A defect in the library itself belongs to the library's repository. A
+tags, so `git tag --contains` does not apply here: a change is published once
+it is merged to `main`. A regression is a port version that installed and
+stopped installing, installs something different from its release asset, or
+installs but breaks a consumer of the installed package (its CMake package
+no longer found by `find_package`, say), after a change here. A defect in the library itself belongs to the library's repository. A
 defect caught by `registry.yml` on a PR needs no RCAPA.
 
 | | |
@@ -27,7 +29,7 @@ defect caught by `registry.yml` on a PR needs no RCAPA.
 | ID prefix | `VCP-NNN` |
 | Ticket | an issue in swarm-routing/vcpkg-registry, form *Regression in a release (RCAPA)*, title `[rcapa] VCP-NNN <short description>`, labels `rcapa` and `bug`; name the port and its version |
 | Verified by | `registry.yml` (tools self-test, `tools/port_bump.py` check, install on `x64-linux` and `wasm32-emscripten`, the `find_package` consumer in `test/consumer/`, `x-ci-verify-versions`) at the failing baseline and the last good one |
-| Corrective action | the fix PR: a new `port-version` (never a rewritten version), rendered by `tools/port_bump.py` |
+| Corrective action | the fix PR with a new `port-version`, never a rewritten version: `tools/port_bump.py refresh` when the upstream description changed, `bump` for a new release; for a portfile-only fix, by hand: `port-version` raised in `ports/<port>/vcpkg.json`, a new entry with the port's git-tree in `versions/<c>-/<port>.json`, `versions/baseline.json` updated, then `tools/port_bump.py check` |
 | Preventive action | a check in `port_bump.py` or a consumer case in `test/consumer/` |
 | Closes when | the fix is merged to `main` (the new baseline commit recorded) |
 
