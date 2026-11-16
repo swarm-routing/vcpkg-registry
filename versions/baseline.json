@@ -1,5 +1,9 @@
 {
   "default": {
+    "beeadhoc-core": {
+      "baseline": "0.2.0",
+      "port-version": 0
+    },
     "swarm-core": {
       "baseline": "0.4.0",
       "port-version": 1
