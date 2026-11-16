@@ -18,7 +18,7 @@ library release. A regression here is a port **recipe** that worked at one
 baseline and broke at a later one: the port stops installing, installs
 something different from its release asset, or installs but breaks a
 consumer of the installed package (its CMake package no longer found by
-`find_package`). A defect in the library itself is an RCAPA in the library's
+`find_package`). A defect of the library itself is an RCAPA in that library's
 repository (`SWC-NNN` in swarm-routing/ns3-swarm-core, a protocol's prefix
 for its core). A recipe defect fixed before it reached `main` needs none.
 
