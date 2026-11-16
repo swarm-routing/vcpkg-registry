@@ -123,6 +123,16 @@ images (verdict: swarm-routing/.github#440). In-org repositories take
 swarm-core by its release lock, not through this registry
 ([CONTRIBUTING "Dependencies"](https://github.com/swarm-routing/.github/blob/main/CONTRIBUTING.md#dependencies)).
 
+<!-- org-sync:begin develop -->
+## Develop
+
+New here? [docs/development.md](docs/development.md) is the developer guide:
+the tools to install, how to get the code and its dependencies, how to
+build, test, run and lint it, the Docker images, what CI checks and how to
+read a red run. How changes are proposed, reviewed and released is the org's
+[CONTRIBUTING.md](https://github.com/swarm-routing/.github/blob/main/CONTRIBUTING.md).
+<!-- org-sync:end develop -->
+
 ## Contributing
 
 Contributions from forks are welcome: see
