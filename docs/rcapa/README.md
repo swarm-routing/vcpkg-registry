@@ -27,10 +27,10 @@ for its core). A recipe defect fixed before it reached `main` needs none.
 | Published as | port recipes in `ports/` and the `versions/` database, at the baseline commit a consumer pins |
 | ID prefix | `VCP-NNN` |
 | Ticket | an issue in swarm-routing/vcpkg-registry, form *Regression in a release (RCAPA)*, title `[rcapa] VCP-NNN <short description>`, labels `rcapa` and `bug`; name the port, its version and both baselines |
-| Verified by | the consumer's failing install or build at the new baseline against the old one; then `registry.yml` (tools self-test, `tools/port_bump.py check`, install on `x64-linux` and `wasm32-emscripten`, the `find_package` consumer in `test/consumer/`, `x-ci-verify-versions`) |
+| Verified by | the consumer's own failing check (install, configure or build), run outside the registry's CI against both baselines; then the registry's own checks, `registry.yml` (tools self-test, `tools/port_bump.py check`, install on `x64-linux` and `wasm32-emscripten`, the `find_package` consumer in `test/consumer/`, `x-ci-verify-versions`) |
 | Corrective action | the fix PR with a new `port-version`, never a rewritten version: `tools/port_bump.py refresh` when the upstream description changed, `bump` for a new release; for a portfile-only fix, by hand: `port-version` raised in `ports/<port>/vcpkg.json`, a new entry with the port's git-tree in `versions/<c>-/<port>.json`, `versions/baseline.json` updated, then `tools/port_bump.py check` |
 | Preventive action | a check in `port_bump.py` or a consumer case in `test/consumer/` |
-| Closes when | the fix is merged to `main` (the new baseline commit recorded) **and** the consumer that found it installs green at that baseline |
+| Closes when | the fix is merged to `main` (the new baseline commit recorded) **and** the consumer's check that failed passes at that baseline |
 
 ```mermaid
 sequenceDiagram
@@ -59,7 +59,7 @@ sequenceDiagram
 2. Copy [`_template.md`](_template.md) to `rcapa-<short-description>.md`
    (lowercase, hyphens: what breaks, not where it was found), and add its row
    to the index in the same pull request.
-3. The ticket stays open until the fix is merged to `main` and the consumer installs green at the new baseline; record that baseline commit in the index.
+3. The ticket stays open until the fix is merged to `main` and the consumer's check that failed passes at the new baseline; record that baseline commit in the index.
 
 ## What an RCAPA answers
 
