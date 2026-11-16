@@ -11,7 +11,7 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_download_distfile(ARCHIVE
     URLS "https://github.com/swarm-routing/BeeAdHoc/releases/download/v${VERSION}/beeadhoc-${VERSION}.tar.gz"
     FILENAME "beeadhoc-${VERSION}.tar.gz"
-    SHA512 d08d56adb120e8bd9af43fe2716979173d80d7663e9041519a26d9cb73be7d988d8c8f4e152b8f7ce9737a2a62223460735b41ca0269f923c65ee8d982f540e0
+    SHA512 1244196737908879e8f7a526d0659a085e88fd2ba772a84847239aae5cbab2e509ec71ec542ddabcd9fe325f601c12ed65f14e8fabb968c53689bd86336cf58e
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 
