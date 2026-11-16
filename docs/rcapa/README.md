@@ -58,8 +58,7 @@ sequenceDiagram
 2. Copy [`_template.md`](_template.md) to `rcapa-<short-description>.md`
    (lowercase, hyphens: what breaks, not where it was found), and add its row
    to the index in the same pull request.
-3. The ticket stays open until the corrective action is merged **and a
-   release carries the fix**; record that release in the index.
+3. The ticket stays open until the fix is merged to `main`; record the new baseline commit in the index.
 
 ## What an RCAPA answers
 
