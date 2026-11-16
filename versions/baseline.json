@@ -1,5 +1,9 @@
 {
   "default": {
+    "ara-core": {
+      "baseline": "0.2.1",
+      "port-version": 0
+    },
     "beeadhoc-core": {
       "baseline": "0.2.1",
       "port-version": 0
