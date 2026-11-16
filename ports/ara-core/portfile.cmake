@@ -11,7 +11,7 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_download_distfile(ARCHIVE
     URLS "https://github.com/swarm-routing/ARA/releases/download/v${VERSION}/ara-${VERSION}.tar.gz"
     FILENAME "ara-${VERSION}.tar.gz"
-    SHA512 0
+    SHA512 9fa75599521ae178524760737b38bf35e5ff5db323f663ff252491760f6ecd3f0920267aac0445be8eef8aa666a55c160dabdd1b3f956e326ad464edb84b7221
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 
