@@ -31,6 +31,9 @@ test/consumer/       the scratch project CI builds with find_package against eve
 
 ## Build & verify
 
+The step-by-step version for people (prerequisites, every command, the CI
+map, troubleshooting) is [`docs/development.md`](docs/development.md).
+
 ```bash
 make help    # the org's standard target names: build, test, lint, format, check, clean, shell, ci
 make check   # everything CI gates on except vcpkg itself: lint, test (port_bump.py --self-test, check), headers, org-sync
