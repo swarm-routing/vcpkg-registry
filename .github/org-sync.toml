@@ -1,5 +1,7 @@
 # org-sync configuration (swarm-routing/.github tools/org-sync).
 kind = "python"
+# bestpractices.dev project (OpenSSF Best Practices badge; id read from the site's public JSON, swarm-routing/.github#531)
+bestpractices_project = "16824"
 title = "vcpkg-registry"
 dual = [""]
 posture = "standalone packaging tooling: vcpkg port files (CMake) and a stdlib Python renderer, no simulation code"
