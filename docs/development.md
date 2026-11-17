@@ -19,6 +19,7 @@ issues and pull requests work is in the org's
 | Linux or macOS, `git`, `make` | any recent | everything |
 | Python | 3.11 or newer | `tools/port_bump.py` (standard library only) |
 | ruff | 0.17.1 | Python lint and format |
+| Docker with its daemon running, or Go | Docker: any recent; Go: 1.27 (swarm-routing/.github `go.mod`) | `make headers`: the licence gate CI runs, from the ci-tools image, or built with `go` when docker is absent |
 | vcpkg | the commit `VCPKG_COMMIT` in `.github/workflows/registry.yml` | installing a port |
 | CMake and Ninja, a C++23 compiler | CMake 3.20+, GCC 13 / Clang 17+ | the consumer build |
 | emsdk | 4.0.10 (`EMSDK_VERSION` in `registry.yml`) | only the `wasm32-emscripten` triplet |
