@@ -11,6 +11,9 @@ name: Registry
 #            also `vcpkg x-ci-verify-versions --verify-git-trees`.
 # vcpkg's own helper ports (vcpkg-cmake, vcpkg-cmake-config) come from the
 # builtin registry at VCPKG_COMMIT. No secret is needed.
+# A docs-only pull request or merge group (top-level prose, docs/, metadata;
+# never a file under ports/ or versions/) skips both jobs' steps, and each
+# check still reports (swarm-routing/.github#581).
 on:
   push:
     branches: [main]
@@ -41,14 +44,23 @@ jobs:
         timeout-minutes: 2
         with:
           egress-policy: audit
+      # a docs-only change skips the steps below; the check still reports (swarm-routing/.github#581)
+      - uses: swarm-routing/.github/.github/actions/changes@main
+        id: changes
+        timeout-minutes: 2
+        with:
+          paths: '^[^/]+\.md$|^docs/|^\.claude/|^\.github/ISSUE_TEMPLATE/|^\.github/(CODEOWNERS|FUNDING\.yml|pull_request_template\.md)$|^LICENSE[^/]*$|^CITATION\.cff$|^\.coderabbit\.yaml$|^\.bestpractices\.json$'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.changes.outputs.docs-only != 'true'
         with:
           persist-credentials: false
       - name: port_bump.py self-test and check
+        if: steps.changes.outputs.docs-only != 'true'
         run: |
           python3 -I tools/port_bump.py --self-test
           python3 -I tools/port_bump.py check
       - name: ruff (the org's pin)
+        if: steps.changes.outputs.docs-only != 'true'
         timeout-minutes: 3
         run: |
           python3 -m pip install --user --only-binary=:all: ruff==0.17.1
@@ -68,11 +80,19 @@ jobs:
         timeout-minutes: 2
         with:
           egress-policy: audit
+      # a docs-only change skips the steps below; the check still reports (swarm-routing/.github#581)
+      - uses: swarm-routing/.github/.github/actions/changes@main
+        id: changes
+        timeout-minutes: 2
+        with:
+          paths: '^[^/]+\.md$|^docs/|^\.claude/|^\.github/ISSUE_TEMPLATE/|^\.github/(CODEOWNERS|FUNDING\.yml|pull_request_template\.md)$|^LICENSE[^/]*$|^CITATION\.cff$|^\.coderabbit\.yaml$|^\.bestpractices\.json$'
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.changes.outputs.docs-only != 'true'
         with:
           persist-credentials: false
           fetch-depth: 0  # the git registry reads versions/ and ports/ from this history
       - name: Bootstrap vcpkg at the pinned commit
+        if: steps.changes.outputs.docs-only != 'true'
         timeout-minutes: 10
         run: |
           git clone --filter=blob:none --no-checkout https://github.com/microsoft/vcpkg.git "$RUNNER_TEMP/vcpkg"
@@ -80,7 +100,7 @@ jobs:
           "$RUNNER_TEMP/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
           echo "VCPKG_ROOT=$RUNNER_TEMP/vcpkg" >> "$GITHUB_ENV"
       - name: Install emsdk
-        if: matrix.triplet == 'wasm32-emscripten'
+        if: steps.changes.outputs.docs-only != 'true' && (matrix.triplet == 'wasm32-emscripten')
         timeout-minutes: 10
         run: |
           git clone --depth 1 --branch "$EMSDK_VERSION" https://github.com/emscripten-core/emsdk.git "$RUNNER_TEMP/emsdk"
@@ -88,7 +108,7 @@ jobs:
           "$RUNNER_TEMP/emsdk/emsdk" activate "$EMSDK_VERSION"
           echo "EMSDK=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
       - name: Verify the versions database
-        if: matrix.triplet == 'x64-linux'
+        if: steps.changes.outputs.docs-only != 'true' && (matrix.triplet == 'x64-linux')
         run: |
           # Our database holds our ports only, so vcpkg reports their helper
           # dependencies (vcpkg-cmake, vcpkg-cmake-config) as unknown; those
@@ -109,6 +129,7 @@ jobs:
           grep -q 'is correctly in the version database' <<<"$out" || { echo "::error::no port verified"; bad=1; }
           exit "$bad"
       - name: Install every port from this registry and build the consumer
+        if: steps.changes.outputs.docs-only != 'true'
         # recent runs: ~1 min (x64-linux), ~2 min (wasm32-emscripten)
         timeout-minutes: 20
         env:
@@ -142,7 +163,7 @@ jobs:
           cmake --build "$work/build"
           if [ "$TRIPLET" = wasm32-emscripten ]; then node "$work/build/consumer.js"; else "$work/build/consumer"; fi
       - name: vcpkg logs
-        if: failure()
+        if: steps.changes.outputs.docs-only != 'true' && (failure())
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vcpkg-logs-${{ matrix.triplet }}
