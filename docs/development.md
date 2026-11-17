@@ -144,8 +144,16 @@ the org bot's bump PRs (`bot/vcpkg-<repository>`) arrive with auto-merge on.
 
 ## Release
 
-The registry is not released: consumers pin a commit of `main` as their
-`baseline`. A new port version arrives when its library releases: the
+Consumers pin a commit of `main` as their `baseline`; vcpkg never reads a
+tag. The registry itself also carries versioned releases
+(swarm-routing/.github#636), cut on the maintainer's request only:
+`.github/workflows/release.yml` calls swarm-routing/.github's
+`reusable-release.yml` (dispatch `dry-run`, then `bump`; merging the bot's
+`chore(release): bump version A to B` PR tags `vX.Y.Z` and publishes
+`vcpkg-registry-X.Y.Z.tar.gz`, the tree at that commit, written by `make
+dist`), with `.cz.toml` (Commitizen) and `CITATION.cff`. The ladder is
+[`docs/roadmap.md`](roadmap.md). A tag names a commit a consumer may use as
+its baseline. A new port version arrives when its library releases: the
 library's release job runs `port_bump.py bump` and the org bot opens the PR
 here (CONTRIBUTING "Outside the org: the vcpkg registry"). How the libraries
 themselves release is [CONTRIBUTING "Cutting a release"](https://github.com/swarm-routing/.github/blob/main/CONTRIBUTING.md#cutting-a-release).

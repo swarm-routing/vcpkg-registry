@@ -4,6 +4,9 @@ kind = "python"
 bestpractices_project = "16824"
 title = "vcpkg-registry"
 dual = [""]
+# CITATION.cff seed and cite badge (swarm-routing/.github#636: versioned releases). Once
+# Zenodo archives the first release, org-bot's `zenodo` task sets zenodo_concept.
+citation = true
 posture = "standalone packaging tooling: vcpkg port files (CMake) and a stdlib Python renderer, no simulation code"
 
 [docs]
