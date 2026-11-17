@@ -3,7 +3,7 @@
 <!-- org-sync:begin badges -->
 | Group | Badges |
 | --- | --- |
-| Release | [![Licence: MIT OR GPL-2.0-only](https://img.shields.io/badge/licence-MIT%20OR%20GPL--2.0--only-blue)](LICENSING.md) |
+| Release | [![Release](https://img.shields.io/github/v/release/swarm-routing/vcpkg-registry?sort=semver&cacheSeconds=1800)](https://github.com/swarm-routing/vcpkg-registry/releases) [![Cite](https://img.shields.io/badge/cite-CITATION.cff-blue)](CITATION.cff) [![Licence: MIT OR GPL-2.0-only](https://img.shields.io/badge/licence-MIT%20OR%20GPL--2.0--only-blue)](LICENSING.md) |
 | Trust | [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/swarm-routing/vcpkg-registry/badge)](https://scorecard.dev/viewer/?uri=github.com/swarm-routing/vcpkg-registry) [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/16824/badge)](https://www.bestpractices.dev/projects/16824) |
 | Stack | [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue?logo=python)](AGENTS.md) |
 | Community & docs | [![Open RCAPA](https://img.shields.io/github/issues/swarm-routing/vcpkg-registry/rcapa?label=open%20RCAPA&color=blue)](https://github.com/swarm-routing/vcpkg-registry/blob/main/docs/rcapa/README.md) [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow)](https://www.conventionalcommits.org) |
@@ -134,6 +134,16 @@ read a red run. How changes are proposed, reviewed and released is the org's
 Whether a regression here gets an RCAPA (root cause analysis with corrective
 and preventive actions), and how: [docs/rcapa/README.md](docs/rcapa/README.md).
 <!-- org-sync:end develop -->
+
+<!-- org-sync:begin citing -->
+## Releases & citing
+
+Versions follow [SemVer](https://semver.org). Each release is listed under [Releases](https://github.com/swarm-routing/vcpkg-registry/releases), built by the org's release workflow and archived on [Zenodo](https://zenodo.org) with its own DOI.
+
+To cite this repository, use the “Cite this repository” button (from [CITATION.cff](CITATION.cff)). It has no DOI yet: the concept DOI appears here and in the badge above once Zenodo archives its first release.
+
+Using it in your work? Contributions are welcome, and citing it helps just as much.
+<!-- org-sync:end citing -->
 
 ## Contributing
 
