@@ -5,10 +5,11 @@
 # (.github/workflows/release.yml; CONTRIBUTING "Cutting a release" there),
 # swarm-routing/.github#636, on the maintainer's request only. vcpkg still
 # reads the registry by baseline commit; a tag names one such commit. SemVer
-# from the Conventional Commits since the last tag; the first release is v0.1.0.
+# from the Conventional Commits since the last tag; the first release is v0.1.0
+# (from 0.0.0, which is never tagged: Commitizen will not bump a version to itself).
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.1.0"
+version = "0.0.0"
 version_scheme = "semver"
 tag_format = "v$version"
 major_version_zero = true
