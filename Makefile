@@ -59,6 +59,7 @@ ci: check ## exactly what CI runs
 # build runs it at the release commit with RELEASE_VERSION set; locally it takes
 # .cz.toml's version.
 dist: ## the release asset: dist/vcpkg-registry-<version>.tar.gz
-	@v="$${RELEASE_VERSION:-$$(python3 -I -c 'import tomllib; print(tomllib.load(open(".cz.toml", "rb"))["tool"]["commitizen"]["version"])')}"; \
+	@v="$${RELEASE_VERSION:-$$(python3 -I -c 'import tomllib; print(tomllib.load(open(".cz.toml", "rb"))["tool"]["commitizen"]["version"])')}" || exit $$?; \
+	[ -n "$$v" ] || { echo "make dist: no version (RELEASE_VERSION or .cz.toml)" >&2; exit 1; }; \
 	mkdir -p dist && git archive --format=tar.gz --prefix="vcpkg-registry-$$v/" -o "dist/vcpkg-registry-$$v.tar.gz" HEAD && \
 	echo "dist/vcpkg-registry-$$v.tar.gz"
