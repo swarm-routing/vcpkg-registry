@@ -63,7 +63,8 @@ jobs:
         if: steps.changes.outputs.docs-only != 'true'
         timeout-minutes: 3
         run: |
-          python3 -m pip install --user --only-binary=:all: ruff==0.17.1
+          # the hash-pinned lock of tools/requirements/ci.in (swarm-routing/.github#716)
+          python3 -m pip install --user --only-binary=:all: --require-hashes -r tools/requirements/ci.txt
           ruff check tools && ruff format --check tools
 
   # tools/'s self-test under coverage.py (reusable-python-ci.yml), report-only
