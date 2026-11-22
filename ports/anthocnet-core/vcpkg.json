@@ -1,0 +1,18 @@
+{
+  "name": "anthocnet-core",
+  "version-semver": "2.8.0",
+  "description": "AntHocNet (Di Caro, Ducatelle & Gambardella), the hybrid ant-colony routing protocol for MANETs, as a paper-faithful reference: a simulator-agnostic C++ core, an ns-3 module, 20-seed benchmarks against AODV/OLSR/DSDV with 95% CIs, satellite/ISL scenarios, and its core compiled to WebAssembly for the learn-site game.",
+  "homepage": "https://github.com/swarm-routing/AntHocNet",
+  "license": "MIT OR GPL-2.0-only",
+  "dependencies": [
+    "swarm-core",
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}
