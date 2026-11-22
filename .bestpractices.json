@@ -70,7 +70,7 @@
   "test_invocation_status": "Met",
   "test_invocation_justification": "Run with `make test`: https://github.com/swarm-routing/vcpkg-registry/blob/main/Makefile.",
   "test_most_status": "?",
-  "test_most_justification": "No coverage report found.",
+  "test_most_justification": "The weekly check reads the coverage of main from Codecov: https://github.com/swarm-routing/vcpkg-registry/blob/main/.github/workflows/registry.yml.",
   "test_continuous_integration_status": "Met",
   "test_continuous_integration_justification": "GitHub Actions runs the tests on every pull request: https://github.com/swarm-routing/vcpkg-registry/blob/main/.github/workflows/registry.yml.",
   "test_policy_status": "Met",
