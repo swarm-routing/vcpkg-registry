@@ -26,7 +26,7 @@ templates/<port>/    a port not released yet (ara-core, beeadhoc-core, termite-c
                      repository's first release that installs core/ as a CMake package (earlier releases cannot build it)
 tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/
 test/consumer/       the scratch project CI builds with find_package against every port
-.github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions
+.github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions; python (the self-test under coverage, report-only) and codecov (its upload)
 .github/workflows/release.yml    the registry's own releases, through swarm-routing/.github's reusable-release.yml, on the maintainer's request only (swarm-routing/.github#636)
 .cz.toml, CITATION.cff           Commitizen config and citation metadata; `make dist` packs the release asset; docs/roadmap.md: the release ladder
 ```

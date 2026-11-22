@@ -66,6 +66,31 @@ jobs:
           python3 -m pip install --user --only-binary=:all: ruff==0.17.1
           ruff check tools && ruff format --check tools
 
+  # tools/'s self-test under coverage.py (reusable-python-ci.yml), report-only
+  # and not a required check; the coverage goes to Codecov
+  # (swarm-routing/.github#635). Its ruff check reads the org ruff.toml; its
+  # format check is off, as `tools` keeps ruff's default format (line length 88).
+  python:
+    uses: swarm-routing/.github/.github/workflows/reusable-python-ci.yml@main
+    with:
+      paths: tools
+      ruff-format: false
+      tests: tools/test_port_bump.py
+      source: tools
+
+  # The Python coverage to Codecov (report-only; GitHub OIDC, no stored
+  # token). Not in the merge queue: main's push uploads it.
+  codecov:
+    needs: python
+    if: github.event_name != 'merge_group'
+    permissions:
+      contents: read
+      id-token: write
+    uses: swarm-routing/.github/.github/workflows/reusable-codecov.yml@main
+    with:
+      artifact: python-coverage
+      flags: python
+
   install:
     name: install (${{ matrix.triplet }})
     runs-on: ubuntu-24.04
