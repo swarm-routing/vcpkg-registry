@@ -3,20 +3,23 @@
 #
 # swarm-core's core/ from its published release tarball (swarm-core-<ver>.tar.gz,
 # top directory swarm-core/), installed as the CMake package swarm-core
-# (swarm-routing/ns3-swarm-core#133): find_package(swarm-core CONFIG REQUIRED),
-# target swarm::core. The SHA512 is written by tools/port_bump.py from the
-# downloaded asset, never by hand.
+# (swarm-routing/swarm-adapter-ns3#133): find_package(swarm-core CONFIG REQUIRED),
+# target swarm::core. Released from swarm-routing/swarm-core from 2.0.0 on
+# (swarm-routing/swarm-core#10, #50); 1.0.0 and earlier from
+# swarm-routing/swarm-adapter-ns3 (then ns3-swarm-core). The SHA512 is written
+# by tools/port_bump.py from the downloaded asset, never by hand.
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
 vcpkg_download_distfile(ARCHIVE
-    URLS "https://github.com/swarm-routing/ns3-swarm-core/releases/download/v${VERSION}/swarm-core-${VERSION}.tar.gz"
+    URLS "https://github.com/swarm-routing/swarm-core/releases/download/v${VERSION}/swarm-core-${VERSION}.tar.gz"
     FILENAME "swarm-core-${VERSION}.tar.gz"
-    SHA512 5f58e3464fd4f1db25be60904fa0fcb623adb64d2712e0085389edeb9af59179e423e7e3559c8ad6c8d2a7f2e495620db785ae561a2c1422e3eb07227c805dd1
+    SHA512 22f2d1307be7216a1f7e37e63625b1ee2ffeb9b2b0fd7e191a5b5a23161a4dce75fc96291302540087dfb25dca592afa9bbd84c0fda8b2d3040f909c73cc198a
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 
-# core/ alone (the ns-3 module in ../ is not part of the port); its tests and
-# microbenchmarks stay off, the install rules on.
+# core/ alone (the tarball carries no ns-3 module from 2.0.0 on; up to 1.0.0 it
+# sat in ../ and was not part of the port); its tests and microbenchmarks stay
+# off, the install rules on.
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}/core"
     OPTIONS

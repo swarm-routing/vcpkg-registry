@@ -4,5 +4,5 @@ swarm-core provides CMake targets:
     target_link_libraries(main PRIVATE swarm::core)
 
 Headers: #include "swarm-ports.h" (include/swarm-core/), the testbench as
-#include "testbench/swarm-testbench.h". Before 1.0 any minor may break the
-API: pin a version (README "Versions").
+#include "testbench/swarm-testbench.h". From 1.0 a major version may break
+the API, a minor never does: pin a major (README "Versions").
