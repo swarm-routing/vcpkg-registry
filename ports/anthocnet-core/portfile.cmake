@@ -11,7 +11,7 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_download_distfile(ARCHIVE
     URLS "https://github.com/swarm-routing/AntHocNet/releases/download/v${VERSION}/anthocnet-${VERSION}.zip"
     FILENAME "anthocnet-${VERSION}.zip"
-    SHA512 d7478dacda43acde414d09702b10dabe6453f4967a35f3bb050dd9381879dcb85465fa355e4a7eb754d1dd42825f5e3acc22ebe2f845d0976815e314a172062d
+    SHA512 4846e60f3fa4cfa3891f39141e3c5a18c5be886d553c844a47d783f6e4c1d602b58c435b70c03308ac339ac2bd8a1287e3c1710296402cc4497e0f7a0ea1c739
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 
