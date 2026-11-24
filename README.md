@@ -34,6 +34,7 @@ swarm-routing/.github#436):
 | `beeadhoc-core` | `beeadhoc-core`, `beeadhoc::core` | swarm-routing/BeeAdHoc#142, then a release |
 | `termite-core` | `termite-core`, `termite::core` | swarm-routing/Termite#135, then a release |
 | `hopnet-core` | `hopnet-core`, `hopnet::core` | swarm-routing/HOPNET#143, then a release |
+| `q-swarm-core` | `q-swarm-core`, `qswarm::core` | a Q-Swarm release (the package since swarm-routing/Q-Swarm#37) |
 | `anthocnet-core` | `anthocnet-core`, `anthocnet::core` | swarm-routing/AntHocNet#1037, then a release (its `anthocnet-<ver>.zip`, checked against `<asset>.sha256`) |
 
 ## Use the registry

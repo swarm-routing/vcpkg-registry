@@ -1,0 +1,6 @@
+q-swarm-core provides CMake targets:
+
+    find_package(q-swarm-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE qswarm::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "q-swarm-version.h" (include/q-swarm-core/).
