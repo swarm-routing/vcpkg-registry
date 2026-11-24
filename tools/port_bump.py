@@ -34,8 +34,17 @@ working tree (so run it before committing too); no port is both in ports/
 and templates/. vcpkg's own `x-ci-verify-versions` checks the committed
 history in CI; this check needs only git and Python.
 
-`--base-url` replaces `https://github.com/` in the asset URL (the self-test
-serves a file:// release tree). Stdlib only, Python 3.10+.
+A release that is not a GitHub release (ns-3's tarball on nsnam.org) is
+declared in the portfile by two comment lines: `# RELEASE_TAG ns-${VERSION}`,
+the tag's form (the default is `v${VERSION}`, X.Y.Z), and `# CHECKSUM_PAGE
+<url>`, the release's own page that lists the asset's SHA-256 or SHA-1
+(`${VERSION}` and `${VERSION_DASHED}`, 3.49 as 3-49, in it are replaced). The
+asset's digest must appear on that page; the port keeps its own description,
+as there is no GitHub repository to read it from.
+
+`--base-url` replaces `https://github.com/` in a GitHub asset URL, and
+`https://` in any other (the self-test serves a file:// release tree).
+Stdlib only, Python 3.10+.
 """
 
 import argparse
@@ -52,6 +61,9 @@ import urllib.request
 VERSION_KEYS = ("version-semver", "version", "version-date", "version-string")
 URLS_RE = re.compile(r'URLS\s+"([^"]+)"')
 SHA512_RE = re.compile(r"^(\s*SHA512\s+)([0-9a-fA-F]+)\s*$", re.MULTILINE)
+RELEASE_TAG_RE = re.compile(r"^#\s*RELEASE_TAG\s+(\S+)\s*$", re.MULTILINE)
+CHECKSUM_PAGE_RE = re.compile(r"^#\s*CHECKSUM_PAGE\s+(\S+)\s*$", re.MULTILINE)
+GITHUB = "https://github.com/"
 
 
 class Failure(SystemExit):
@@ -141,14 +153,58 @@ def release_sha256(url, name):
     return listed.get(name)
 
 
+def tag_version(portfile_text, tag):
+    """The version a release tag names, by the port's RELEASE_TAG form
+    (default `v${VERSION}`, X.Y.Z; a declared form also takes X.Y)."""
+    m = RELEASE_TAG_RE.search(portfile_text)
+    form = m.group(1) if m else "v${VERSION}"
+    ver = r"(\d+\.\d+(?:\.\d+)?)" if m else r"(\d+\.\d+\.\d+)"
+    rx = re.escape(form).replace(re.escape("${VERSION}"), ver)
+    hit = re.fullmatch(rx, tag)
+    if not hit:
+        shown = "vX.Y.Z" if not m else form.replace("${VERSION}", "X.Y")
+        raise Failure(f"{tag}: a release tag is {shown}")
+    return hit.group(1)
+
+
+def rebase(url, base_url):
+    """The URL served under --base-url (the self-test's file:// tree)."""
+    if not base_url:
+        return url
+    if url.startswith(GITHUB):
+        return url.replace(GITHUB, base_url.rstrip("/") + "/", 1)
+    return url.replace("https://", base_url.rstrip("/") + "/", 1)
+
+
 def asset_url(portfile_text, version, base_url):
     m = URLS_RE.search(portfile_text)
     if not m:
         raise Failure('portfile.cmake: no URLS "..." line')
-    url = m.group(1).replace("${VERSION}", version)
-    if base_url:
-        url = url.replace("https://github.com/", base_url.rstrip("/") + "/", 1)
-    return url
+    return rebase(m.group(1).replace("${VERSION}", version), base_url)
+
+
+def is_github(portfile_text):
+    m = URLS_RE.search(portfile_text)
+    return bool(m) and m.group(1).startswith(GITHUB)
+
+
+def check_listed(portfile_text, version, url, name, asset, base_url):
+    """The asset is the one its release lists: SHA256SUMS (or <asset>.sha256)
+    for a GitHub release, the CHECKSUM_PAGE's SHA-256 or SHA-1 otherwise."""
+    m = CHECKSUM_PAGE_RE.search(portfile_text)
+    if not m:
+        if release_sha256(url, name) != hashlib.sha256(asset).hexdigest():
+            raise Failure(f"{name}: its sha256 is not the one the release lists")
+        return
+    page_url = (
+        m.group(1)
+        .replace("${VERSION_DASHED}", version.replace(".", "-"))
+        .replace("${VERSION}", version)
+    )
+    page = fetch(rebase(page_url, base_url)).decode("utf-8", "replace").lower()
+    digests = (hashlib.sha256(asset).hexdigest(), hashlib.sha1(asset).hexdigest())
+    if not any(re.search(rf"\b{d}\b", page) for d in digests):
+        raise Failure(f"{name}: neither its sha256 nor its sha1 is on {page_url}")
 
 
 def upstream_description(url, base_url=""):
@@ -187,9 +243,6 @@ def upstream_description(url, base_url=""):
 
 
 def bump(root, port, tag, base_url=""):
-    if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
-        raise Failure(f"{tag}: a release tag is vX.Y.Z")
-    version = tag[1:]
     pdir = os.path.join(root, "ports", port)
     tdir = os.path.join(root, "templates", port)
     created = not os.path.isdir(pdir)
@@ -199,6 +252,7 @@ def bump(root, port, tag, base_url=""):
     # Everything is validated before anything is written: the release, and
     # that this version is not already recorded at a later port-version.
     text = read_text(os.path.join(src, "portfile.cmake"))
+    version = tag_version(text, tag)
     manifest = read_json(os.path.join(src, "vcpkg.json"))
     key = version_key(manifest)
     vpath = versions_file(root, port)
@@ -211,12 +265,12 @@ def bump(root, port, tag, base_url=""):
             f"{port} {version} is already recorded at port-version "
             f"{max(v['port-version'] for v in later)}; a bump to the same release would reset it"
         )
+    if not is_github(text) and not CHECKSUM_PAGE_RE.search(text):
+        raise Failure(f"{port}: not a GitHub release and no # CHECKSUM_PAGE line")
     url = asset_url(text, version, base_url)
     asset = fetch(url)
     name = url.rsplit("/", 1)[1]
-    listed = release_sha256(url, name)
-    if listed != hashlib.sha256(asset).hexdigest():
-        raise Failure(f"{name}: its sha256 is not the one the release lists")
+    check_listed(text, version, url, name, asset, base_url)
     if not SHA512_RE.search(text):
         raise Failure("portfile.cmake: no SHA512 line")
     text = SHA512_RE.sub(
@@ -224,7 +278,12 @@ def bump(root, port, tag, base_url=""):
     )
     manifest[key] = version
     manifest.pop("port-version", None)
-    manifest["description"] = upstream_description(url, base_url)
+    if is_github(text):
+        manifest["description"] = upstream_description(url, base_url)
+    elif not str(manifest.get("description", "")).strip():
+        raise Failure(
+            f"{port}: not a GitHub release, so vcpkg.json keeps a description"
+        )
 
     # Written now; undone if the recorded tree for this version disagrees.
     old = {}
@@ -287,7 +346,14 @@ def refresh(root, port, base_url=""):
     manifest = read_json(mpath)
     key = version_key(manifest)
     version = manifest[key]
-    url = asset_url(read_text(os.path.join(pdir, "portfile.cmake")), version, base_url)
+    text = read_text(os.path.join(pdir, "portfile.cmake"))
+    if not is_github(text):
+        print(
+            f"port_bump: {port} {version}: not a GitHub release, description kept",
+            file=sys.stderr,
+        )
+        return {"port": port, "version": version, "changed": False}
+    url = asset_url(text, version, base_url)
     desc = upstream_description(url, base_url)
     if manifest.get("description") == desc:
         print(f"port_bump: {port} {version}: description current", file=sys.stderr)
@@ -590,6 +656,64 @@ def self_test():
         )
         base_db = read_json(os.path.join(repo, "versions/baseline.json"))["default"]
         expect(list(base_db) == ["lib", "next"], "baseline sorted")
+
+        # A release outside GitHub (ns-3's tarball): its tag form and the page
+        # that lists the asset's SHA-1, both declared in the portfile.
+        sim = os.path.join(rel, "sim.example", "releases")
+        os.makedirs(os.path.join(sim, "sim-3-9", "download"))
+        with open(os.path.join(sim, "sim-3.9.tar.bz2"), "wb") as f:
+            f.write(b"sim")
+
+        def page(text):
+            with open(os.path.join(sim, "sim-3-9", "download", "index"), "w") as f:
+                f.write(text)
+
+        os.makedirs(os.path.join(repo, "ports/sim"))
+        with open(os.path.join(repo, "ports/sim/portfile.cmake"), "w") as f:
+            f.write(
+                "# RELEASE_TAG sim-${VERSION}\n"
+                "# CHECKSUM_PAGE https://sim.example/releases/sim-${VERSION_DASHED}/download/index\n"
+                'vcpkg_download_distfile(ARCHIVE\n    URLS "https://sim.example/releases/sim-${VERSION}.tar.bz2"\n'
+                '    FILENAME "sim-${VERSION}.tar.bz2"\n    SHA512 0\n)\n'
+            )
+        write_json(
+            os.path.join(repo, "ports/sim/vcpkg.json"),
+            {"name": "sim", "version": "3.8", "description": "sim, kept"},
+        )
+        page(f"<p>sha1sum: {hashlib.sha1(b'other').hexdigest()}</p>")
+        raises(
+            lambda: bump(repo, "sim", "sim-3.9", base),
+            "asset not on its checksum page",
+            "nor its sha1",
+        )
+        raises(lambda: bump(repo, "sim", "v3.9.0", base), "tag form", "sim-X.Y")
+        page(f"<p>sha1sum: {hashlib.sha1(b'sim').hexdigest()}</p>")
+        r = bump(repo, "sim", "sim-3.9", base)
+        m = read_json(os.path.join(repo, "ports/sim/vcpkg.json"))
+        expect(
+            r["version"] == "3.9" and m["version"] == "3.9",
+            "a sim-X.Y tag gives version X.Y",
+        )
+        expect(
+            m["description"] == "sim, kept"
+            and hashlib.sha512(b"sim").hexdigest()
+            in read_text(os.path.join(repo, "ports/sim/portfile.cmake")),
+            "outside GitHub: SHA512 written, description kept",
+        )
+        expect(
+            not refresh(repo, "sim", base)["changed"] and check(repo) == 0,
+            "refresh keeps an outside port's description; check passes",
+        )
+        with open(os.path.join(repo, "ports/sim/portfile.cmake"), "w") as f:
+            f.write(
+                'vcpkg_download_distfile(ARCHIVE\n    URLS "https://sim.example/releases/sim-${VERSION}.tar.bz2"\n'
+                "    SHA512 0\n)\n"
+            )
+        raises(
+            lambda: bump(repo, "sim", "v3.9.0", base),
+            "outside GitHub without a checksum page",
+            "CHECKSUM_PAGE",
+        )
 
     print(f"port_bump self-test: {'ok' if not fails else f'{len(fails)} failure(s)'}")
     return 1 if fails else 0

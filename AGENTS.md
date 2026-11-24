@@ -7,7 +7,7 @@ before changing anything. Org-wide conventions:
 
 ## What this repo is
 
-**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the five protocol cores wait in `templates/` for their first release with a CMake package (swarm-routing/.github#436).** Epic: swarm-routing/.github#436.
+**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the five protocol cores wait in `templates/` for their first release with a CMake package (swarm-routing/.github#436); the `ns3` port (stock ns-3.49, x64-linux only) is the base of the ns-3 module ports, `sim-tools-ns3` the first (#76, swarm-routing/.github#881).** Epics: swarm-routing/.github#436, swarm-routing/.github#881.
 
 The swarm-routing org's [vcpkg git registry](https://learn.microsoft.com/vcpkg/maintainers/registries):
 one port per simulator-free C++ core the org releases (`swarm-core` first,
@@ -15,16 +15,23 @@ then each protocol's `core/`, each on the `swarm-core` port), the `versions/`
 database vcpkg reads, and CI that installs every port on `x64-linux` and
 `wasm32-emscripten` and builds a `find_package` consumer. Ports download a
 published release asset and check it by SHA512; a release of the library
-opens the bump PR here (swarm-routing/.github#439). The ns-3 modules are not
-ports (swarm-routing/.github#440). In-org repositories consume swarm-core by
+opens the bump PR here (swarm-routing/.github#439). The ns-3 modules are
+ports too (swarm-routing/.github#881, replacing swarm-routing/.github#440),
+built on the `ns3` port through its `share/ns3/contrib/` project and
+installed on `x64-linux` only: a port's `supports` decides the triplets CI
+installs it on. ns-3 itself stays stock; its bugs are worked around in the
+org's modules, each named by its NS3 ID (swarm-routing/sim-tools
+`docs/ns3-bugs.md`). In-org repositories consume swarm-core by
 release lock, not through this registry (CONTRIBUTING "Dependencies").
 
 ```
-ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core today)
+ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core, the protocol cores, ns3, sim-tools-ns3: one per sim-tools simulator folder)
+ports/ns3/contrib/   the CMake project module ports build an ns-3 contrib module with (build_lib outside an ns-3 tree)
 versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
 templates/<port>/    a port not released yet (ara-core, beeadhoc-core, termite-core, hopnet-core, anthocnet-core): moved into ports/ on its
                      repository's first release that installs core/ as a CMake package (earlier releases cannot build it)
-tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/
+tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/;
+                     a release outside GitHub (ns-3) via the portfile's # RELEASE_TAG and # CHECKSUM_PAGE lines
 test/consumer/       the scratch project CI builds with find_package against every port
 .github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions; python (the self-test under coverage, report-only) and codecov (its upload)
 .github/workflows/release.yml    the registry's own releases, through swarm-routing/.github's reusable-release.yml, on the maintainer's request only (swarm-routing/.github#636)

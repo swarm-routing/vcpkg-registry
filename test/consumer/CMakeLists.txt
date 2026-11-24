@@ -12,3 +12,18 @@ message(STATUS "swarm-core ${swarm-core_VERSION} from ${swarm-core_DIR}")
 
 add_executable(consumer consumer.cc)
 target_link_libraries(consumer PRIVATE swarm::core)
+
+# The ns-3 ports (x64-linux only, #76): CONSUMER_PORTS is the list CI installs
+# on this triplet; each ns-3 port in it must be found.
+set(CONSUMER_PORTS "" CACHE STRING "the ports vcpkg installed for this triplet")
+if("ns3" IN_LIST CONSUMER_PORTS)
+  find_package(ns3 CONFIG REQUIRED)
+  add_executable(consumer-ns3 consumer-ns3.cc)
+  target_link_libraries(consumer-ns3 PRIVATE
+    ns3::core ns3::network ns3::internet ns3::point-to-point ns3::applications)
+  if("sim-tools-ns3" IN_LIST CONSUMER_PORTS)
+    find_package(sim-tools-ns3 CONFIG REQUIRED)
+    target_link_libraries(consumer-ns3 PRIVATE ns3::routing-bench)
+    target_compile_definitions(consumer-ns3 PRIVATE CONSUMER_ROUTING_BENCH)
+  endif()
+endif()

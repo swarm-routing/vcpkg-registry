@@ -1,0 +1,7 @@
+sim-tools-ns3 provides sim-tools' ns-3 modules, built on the ns3 port:
+
+    find_package(sim-tools-ns3 CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE ns3::routing-bench)
+
+Headers: #include "ns3/routing-bench-module.h". The harness programs are in
+tools/sim-tools-ns3/ (routing-compare --PrintHelp). x64-linux only.
