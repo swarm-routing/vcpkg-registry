@@ -202,7 +202,12 @@ def check_listed(portfile_text, version, url, name, asset, base_url):
         .replace("${VERSION}", version)
     )
     page = fetch(rebase(page_url, base_url)).decode("utf-8", "replace").lower()
-    digests = (hashlib.sha256(asset).hexdigest(), hashlib.sha1(asset).hexdigest())
+    # SHA-1 only to match what the release page publishes (nsnam lists
+    # sha1sum); the port pins the asset by its SHA-512
+    digests = (
+        hashlib.sha256(asset).hexdigest(),
+        hashlib.sha1(asset, usedforsecurity=False).hexdigest(),
+    )
     if not any(re.search(rf"\b{d}\b", page) for d in digests):
         raise Failure(f"{name}: neither its sha256 nor its sha1 is on {page_url}")
 
@@ -682,7 +687,9 @@ def self_test():
             os.path.join(repo, "ports/sim/vcpkg.json"),
             {"name": "sim", "version": "3.8", "description": "sim, kept"},
         )
-        page(f"<p>sha1sum: {hashlib.sha1(b'other').hexdigest()}</p>")
+        page(
+            f"<p>sha1sum: {hashlib.sha1(b'other', usedforsecurity=False).hexdigest()}</p>"
+        )
         raises(
             lambda: bump(repo, "sim", "sim-3.9", base),
             "asset not on its checksum page",
@@ -702,7 +709,9 @@ def self_test():
             os.path.join(repo, "ports/sim/vcpkg.json"),
             {"name": "sim", "version": "3.8", "description": "sim, kept"},
         )
-        page(f"<p>sha1sum: {hashlib.sha1(b'sim').hexdigest()}</p>")
+        page(
+            f"<p>sha1sum: {hashlib.sha1(b'sim', usedforsecurity=False).hexdigest()}</p>"
+        )
         r = bump(repo, "sim", "sim-3.9", base)
         m = read_json(os.path.join(repo, "ports/sim/vcpkg.json"))
         expect(
