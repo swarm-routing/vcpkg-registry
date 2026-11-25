@@ -14,7 +14,7 @@
     },
     "ns3": {
       "baseline": "3.49",
-      "port-version": 0
+      "port-version": 1
     },
     "sim-tools-ns3": {
       "baseline": "1.1.4",

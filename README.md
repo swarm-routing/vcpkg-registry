@@ -21,12 +21,17 @@ builds a `find_package` consumer (epic swarm-routing/.github#436).
 | `ns3` | [![vcpkg: ns3](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fns3%2Fvcpkg.json&query=%24.version&label=vcpkg%20ns3)](ports/ns3) | stock [ns-3](https://www.nsnam.org), the release the org's images build, with their modules, shared libraries; x64-linux only (#76) | `find_package(ns3 CONFIG REQUIRED)`, `ns3::<module>` (`ns3::core`, `ns3::wifi`, …) | `ns-<ver>.tar.bz2` from nsnam.org, checked against the SHA-1 its download page lists |
 | `sim-tools-ns3` | [![vcpkg: sim-tools-ns3](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fsim-tools-ns3%2Fvcpkg.json&query=%24%5B%22version-semver%22%5D&label=vcpkg%20sim-tools-ns3)](ports/sim-tools-ns3) | sim-tools' ns-3 modules (its `ns3/` folder: routing-bench, the comparison harness with the stock arms), on the `ns3` port; one port per simulator folder of [sim-tools](https://github.com/swarm-routing/sim-tools); x64-linux only | `find_package(sim-tools-ns3 CONFIG REQUIRED)`, `ns3::routing-bench`; `routing-compare` in `tools/sim-tools-ns3/` | `routing-bench-<ver>.tar.gz` of each release |
 
-The `ns3` port carries no patch: as the org's images, it is stock ns-3, and
-the org works around ns-3's bugs in its own modules
-([the register](https://github.com/swarm-routing/sim-tools/blob/main/docs/ns3-bugs.md)).
-On ns-3.49: **NS3-001**, stock AODV livelocks in a zero-time ICMP storm
-(routing-bench guards its aodv arm, `IcmpErrorGuardHelper`; your own stock
-AODV is exposed); **NS3-002**, AODV and DSDV order sockets by heap address
+The ns-3 bugs of the org's
+[register](https://github.com/swarm-routing/sim-tools/blob/main/docs/ns3-bugs.md),
+on ns-3.49: **NS3-001**, stock AODV livelocks in a zero-time ICMP storm. The
+port applies the upstream fix,
+[nsnam/ns-3-dev!3101](https://gitlab.com/nsnam/ns-3-dev/-/merge_requests/3101)
+at its head `d3fbcacb` (`ports/ns3/patches/`), when the source has the bug: it
+skips the patch on a release without `SendIcmpNoRoute` or one that already has
+the fix, and stops on one that changed that code
+(maintainer decision 2026-11-25). So on 3.49 this port is not stock ns-3, as
+the org's images are; routing-bench keeps its `IcmpErrorGuardHelper` either
+way. **NS3-002**, AODV and DSDV order sockets by heap address
 (routing-bench's `--isolateArms`); **NS3-003**, DSDV on a route with a null
 output device (avoid DSDV on multi-interface topologies). It is not built for
 `wasm32-emscripten`: ns-3 has no WebAssembly support, and ns-3 needs shared

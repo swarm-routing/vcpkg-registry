@@ -1,0 +1,204 @@
+diff --git a/src/internet/model/ipv4-l3-protocol.cc b/src/internet/model/ipv4-l3-protocol.cc
+index 993e0a99638cdf1d2813d90c33b3046ff8f08df5..a28f4de4289a1d6ccc58fd25650f2c59d7e9659c 100644
+--- a/src/internet/model/ipv4-l3-protocol.cc
++++ b/src/internet/model/ipv4-l3-protocol.cc
+@@ -11,6 +11,7 @@
+ #include "arp-cache.h"
+ #include "arp-l3-protocol.h"
+ #include "icmpv4-l4-protocol.h"
++#include "icmpv4.h"
+ #include "ipv4-header.h"
+ #include "ipv4-interface.h"
+ #include "ipv4-raw-socket-impl.h"
+@@ -652,16 +653,59 @@ void
+ Ipv4L3Protocol::SendIcmpNoRoute(const Ipv4Header& ipHeader, Ptr<const Packet> packet)
+ {
+     NS_LOG_FUNCTION(this << ipHeader << packet);
+-    // @RFC{1812} sec 4.3.2.7 / 5.2.7.1: a router that cannot forward a datagram
+-    // because it has no route to the destination network must return an ICMP
+-    // Destination Unreachable (net unreachable) message to the source (see @issueid{825}).
+-    // Only a node configured as a forwarder (router) generates this message, and
+-    // never in response to a datagram with a multicast or broadcast destination.
+-    if (!m_ipForward || ipHeader.GetDestination().IsMulticast() ||
+-        ipHeader.GetDestination() == Ipv4Address::GetBroadcast())
++    // @RFC{1812} sec 4.3.2.7 / 5.2.7.1: routers report no-route
++    // forwarding failures, subject to the exceptions in @RFC{1122} sec 3.2.2.
++    if (!m_ipForward)
+     {
+         return;
+     }
++    if (!IsUnicast(ipHeader.GetDestination()) || ipHeader.GetFragmentOffset() != 0)
++    {
++        return;
++    }
++
++    const Ipv4Address source = ipHeader.GetSource();
++    const auto firstOctet = static_cast<uint8_t>(source.Get() >> 24);
++    // Do not send ICMP errors to non-host source addresses (0/8,
++    // loopback, multicast, or reserved), or back to this router itself.
++    if (firstOctet == 0 || firstOctet == 127 || firstOctet >= 224 || !IsUnicast(source))
++    {
++        return;
++    }
++    for (uint32_t i = 0; i < GetNInterfaces(); ++i)
++    {
++        for (uint32_t j = 0; j < GetNAddresses(i); ++j)
++        {
++            if (GetAddress(i, j).GetLocal() == source)
++            {
++                return;
++            }
++        }
++    }
++
++    // An error in response to an ICMP error can re-enter the routing
++    // failure callback indefinitely (see @issueid{1408}).
++    if (ipHeader.GetProtocol() == Icmpv4L4Protocol::GetStaticProtocolNumber())
++    {
++        if (packet->GetSize() == 0)
++        {
++            return;
++        }
++        uint8_t type = 0;
++        packet->CopyData(&type, 1);
++        switch (type)
++        {
++        case Icmpv4Header::ICMPV4_DEST_UNREACH:
++        case 4: // Source Quench
++        case 5: // Redirect
++        case Icmpv4Header::ICMPV4_TIME_EXCEEDED:
++        case 12: // Parameter Problem
++            return;
++        default:
++            break;
++        }
++    }
++
+     Ptr<Icmpv4L4Protocol> icmp = GetIcmp();
+     if (icmp)
+     {
+diff --git a/src/internet/test/ipv4-icmp-no-route-test-suite.cc b/src/internet/test/ipv4-icmp-no-route-test-suite.cc
+index 22da18e322e1ad591e5075d2d5e330e667f5d046..4e2bfaa1ebed092e29e3aeb3430259a4686f197a 100644
+--- a/src/internet/test/ipv4-icmp-no-route-test-suite.cc
++++ b/src/internet/test/ipv4-icmp-no-route-test-suite.cc
+@@ -28,7 +28,8 @@
+  *   Unreachable (type 3, code 0 net-unreachable) sourced from R back to A.
+  *
+  * Expected behaviour:
+- *   A receives exactly one ICMP Destination Unreachable message from R.
++ *   A receives an ICMP Destination Unreachable for an Echo Request, but not
++ *   for another ICMP error message.
+  */
+ 
+ #include "ns3/boolean.h"
+@@ -54,7 +55,9 @@
+ #include "ns3/test.h"
+ #include "ns3/uinteger.h"
+ 
++#include <array>
+ #include <cstdint>
++#include <string>
+ 
+ using namespace ns3;
+ 
+@@ -78,14 +81,18 @@ NS_LOG_COMPONENT_DEFINE("Ipv4IcmpNoRouteTestSuite");
+  *     - A opens a raw ICMP socket (protocol 1) to capture returned ICMP errors
+  *       and sends a single raw packet to 10.9.9.9 (inside the un-routable D).
+  *
+- * Pre-fix observation: A receives 0 ICMP errors (R drops silently), so the
+- * final assertion fails. Post-fix, A receives one ICMP type-3 message and the
+- * test passes.
++ * An ICMP Echo Request triggers one no-route error; an ICMP error (types
++ * 3, 4, 5, 11 and 12) must not trigger another one (see @issueid{1408}).
+  */
+ class Ipv4IcmpNoRouteTestCase : public TestCase
+ {
+   public:
+-    Ipv4IcmpNoRouteTestCase();
++    /**
++     * Construct a no-route test for a particular ICMP message type.
++     * @param type ICMP type sent toward the unroutable destination.
++     * @param expectedCount Expected number of ICMP errors returned by R.
++     */
++    Ipv4IcmpNoRouteTestCase(uint8_t type, uint32_t expectedCount);
+     ~Ipv4IcmpNoRouteTestCase() override;
+ 
+   private:
+@@ -112,10 +119,14 @@ class Ipv4IcmpNoRouteTestCase : public TestCase
+ 
+     uint32_t m_icmpUnreachCount{0}; //!< Number of ICMP Dest Unreachable msgs received by A
+     Ipv4Address m_icmpSource;       //!< Source address of the received ICMP error
++    uint8_t m_sentType;             //!< ICMP type of the original datagram
++    uint32_t m_expectedCount;       //!< Expected no-route error count
+ };
+ 
+-Ipv4IcmpNoRouteTestCase::Ipv4IcmpNoRouteTestCase()
+-    : TestCase("ICMP net-unreachable on no-route forwarding failure (issue #825)")
++Ipv4IcmpNoRouteTestCase::Ipv4IcmpNoRouteTestCase(uint8_t type, uint32_t expectedCount)
++    : TestCase("ICMP no-route response to type " + std::to_string(type)),
++      m_sentType(type),
++      m_expectedCount(expectedCount)
+ {
+ }
+ 
+@@ -126,9 +137,13 @@ Ipv4IcmpNoRouteTestCase::~Ipv4IcmpNoRouteTestCase()
+ void
+ Ipv4IcmpNoRouteTestCase::SendData(Ptr<Socket> socket, Ipv4Address dst)
+ {
+-    // A plain payload; the IP layer adds the Ipv4Header with protocol 1 (ICMP)
+-    // because the raw socket was created with the ICMP protocol number.
++    // The raw socket adds the IP header. Build a valid ICMP common header
++    // so the router can distinguish errors from informational messages.
+     Ptr<Packet> p = Create<Packet>(8);
++    Icmpv4Header icmp;
++    icmp.SetType(m_sentType);
++    icmp.SetCode(0);
++    p->AddHeader(icmp);
+     Address realTo = InetSocketAddress(dst, 0);
+     socket->SendTo(p, 0, realTo);
+     NS_LOG_DEBUG("A sent " << p->GetSize() << " bytes to un-routable " << dst);
+@@ -262,18 +277,16 @@ Ipv4IcmpNoRouteTestCase::DoRun()
+     Simulator::Run();
+     Simulator::Destroy();
+ 
+-    // A receives exactly one ICMP Destination Unreachable message, sourced
+-    // from the router R (10.0.0.2).
+     NS_TEST_EXPECT_MSG_EQ(m_icmpUnreachCount,
+-                          1,
+-                          "Source A should receive exactly one ICMP Destination Unreachable "
+-                          "(net-unreachable) from the router on a no-route forwarding failure "
+-                          "(issue #825)");
+-
+-    NS_TEST_EXPECT_MSG_EQ(m_icmpSource,
+-                          Ipv4Address("10.0.0.2"),
+-                          "The ICMP Destination Unreachable should be sourced from the router R "
+-                          "(10.0.0.2)");
++                          m_expectedCount,
++                          "An ICMP error must not trigger another ICMP error (issue #1408)");
++
++    if (m_expectedCount != 0)
++    {
++        NS_TEST_EXPECT_MSG_EQ(m_icmpSource,
++                              Ipv4Address("10.0.0.2"),
++                              "The ICMP Destination Unreachable should be sourced from router R");
++    }
+ }
+ 
+ /**
+@@ -288,7 +301,15 @@ class Ipv4IcmpNoRouteTestSuite : public TestSuite
+     Ipv4IcmpNoRouteTestSuite()
+         : TestSuite("ipv4-icmp-no-route", Type::UNIT)
+     {
+-        AddTestCase(new Ipv4IcmpNoRouteTestCase, TestCase::Duration::QUICK);
++        // Informational ICMP messages are eligible for a no-route reply.
++        AddTestCase(new Ipv4IcmpNoRouteTestCase(Icmpv4Header::ICMPV4_ECHO, 1),
++                    TestCase::Duration::QUICK);
++        // RFC 1122 section 3.2.2 forbids an error in response to an error.
++        constexpr std::array<uint8_t, 5> errorTypes{3, 4, 5, 11, 12};
++        for (auto type : errorTypes)
++        {
++            AddTestCase(new Ipv4IcmpNoRouteTestCase(type, 0), TestCase::Duration::QUICK);
++        }
+     }
+ };
+ 

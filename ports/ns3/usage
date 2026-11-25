@@ -8,5 +8,8 @@ Headers as in an ns-3 tree: #include "ns3/core-module.h". They need C++23
 
     target_compile_features(main PRIVATE cxx_std_23)
 
-Shared libraries only (x64-linux). Known ns-3 bugs on this release and the org's workarounds:
+Shared libraries only (x64-linux). On ns-3.49 the port applies the upstream
+fix for NS3-001 (stock AODV's ICMP no-route livelock, nsnam/ns-3-dev!3101),
+so it is not stock ns-3 there: the org's images are. Known ns-3 bugs on this
+release and the org's workarounds:
 https://github.com/swarm-routing/sim-tools/blob/main/docs/ns3-bugs.md

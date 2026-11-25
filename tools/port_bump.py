@@ -5,6 +5,7 @@
 
     port_bump.py bump --port NAME --tag vX.Y.Z [--root DIR] [--base-url URL]
     port_bump.py refresh --port NAME [--root DIR] [--base-url URL]
+    port_bump.py revise --port NAME [--root DIR]
     port_bump.py check [--root DIR]
     port_bump.py --self-test
 
@@ -391,6 +392,40 @@ def refresh(root, port, base_url=""):
     }
 
 
+def revise(root, port):
+    """A change to a port at the same release (a patch, a build option): the
+    next port-version, recorded with the git-tree git computes. Refused when
+    ports/<port> is what its current port-version records."""
+    pdir = os.path.join(root, "ports", port)
+    if not os.path.isdir(pdir):
+        raise Failure(f"no ports/{port}")
+    mpath = os.path.join(pdir, "vcpkg.json")
+    manifest = read_json(mpath)
+    key = version_key(manifest)
+    version, pv = manifest[key], manifest.get("port-version", 0)
+    vpath = versions_file(root, port)
+    db = read_json(vpath)
+    current = [
+        e
+        for e in db["versions"]
+        if e.get(key) == version and e.get("port-version", 0) == pv
+    ]
+    if current and current[0]["git-tree"] == git_tree(root, port):
+        raise Failure(f"{port} {version}#{pv}: nothing changed in ports/{port}")
+    pv += 1
+    manifest["port-version"] = pv
+    write_json(mpath, manifest)
+    tree = git_tree(root, port)
+    db["versions"].insert(0, {key: version, "port-version": pv, "git-tree": tree})
+    write_json(vpath, db)
+    bpath = os.path.join(root, "versions", "baseline.json")
+    base = read_json(bpath)
+    base["default"][port] = {"baseline": version, "port-version": pv}
+    write_json(bpath, base)
+    print(f"port_bump: {port} {version}#{pv}: git-tree {tree}", file=sys.stderr)
+    return {"port": port, "version": version, "port_version": pv, "git_tree": tree}
+
+
 def check(root):
     problems = []
     ports_dir = os.path.join(root, "ports")
@@ -664,6 +699,20 @@ def self_test():
         base_db = read_json(os.path.join(repo, "versions/baseline.json"))["default"]
         expect(list(base_db) == ["lib", "next"], "baseline sorted")
 
+        # revise: a port change at the same release is the next port-version
+        raises(lambda: revise(repo, "lib"), "revise with no change", "nothing changed")
+        with open(os.path.join(repo, "ports/lib/fix.patch"), "w") as f:
+            f.write("a patch\n")
+        r = revise(repo, "lib")
+        expect(
+            r["port_version"] == 2
+            and read_json(os.path.join(repo, "ports/lib/vcpkg.json"))["port-version"]
+            == 2
+            and check(repo) == 0,
+            "revise: the next port-version, recorded; check passes",
+        )
+        raises(lambda: revise(repo, "nope"), "revise an unknown port", "no ports/nope")
+
         # A release outside GitHub (ns-3's tarball): its tag form and the page
         # that lists the asset's SHA-1, both declared in the portfile.
         sim = os.path.join(rel, "sim.example", "releases")
@@ -767,6 +816,11 @@ def main(argv=None):
     f.add_argument("--port", required=True)
     f.add_argument("--root", default=".")
     f.add_argument("--base-url", default="")
+    r = sub.add_parser(
+        "revise", help="a port change at the same release: the next port-version"
+    )
+    r.add_argument("--port", required=True)
+    r.add_argument("--root", default=".")
     c = sub.add_parser("check", help="versions/ matches ports/")
     c.add_argument("--root", default=".")
     a = ap.parse_args(argv)
@@ -779,6 +833,9 @@ def main(argv=None):
         return 0
     if a.cmd == "refresh":
         refresh(os.path.abspath(a.root), a.port, a.base_url)
+        return 0
+    if a.cmd == "revise":
+        revise(os.path.abspath(a.root), a.port)
         return 0
     if a.cmd == "check":
         return check(os.path.abspath(a.root))
