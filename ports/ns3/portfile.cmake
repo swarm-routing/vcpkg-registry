@@ -71,6 +71,10 @@ vcpkg_cmake_configure(
         -DNS3_VCPKG=OFF
         -DNS3_FETCH_OPTIONAL_COMPONENTS=OFF
         -DNS3_ENABLE_BUILD_VERSION=OFF
+        # core probes for Boost.Units unconditionally and, when the build
+        # host has it, exports HAVE_BOOST to consumers (length.h then
+        # includes Boost): settle the probe, so the package never needs Boost
+        -DHAVE_BOOST_UNITS=OFF
         # the release build keeps NS_ASSERT and NS_LOG, as ns-3's own
         # `default` profile: a library for simulations, not a benchmark binary
         -DNS3_ASSERT=ON
@@ -84,6 +88,12 @@ vcpkg_cmake_configure(
 )
 vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(PACKAGE_NAME ns3 CONFIG_PATH lib/cmake/ns3)
+# ns-3 exports its build profile as an interface definition, and the fixup
+# keeps the release targets file: give a Debug consumer the debug profile's
+# definition, as the debug libraries were built with it
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/share/ns3/ns3Targets.cmake"
+    "NS3_BUILD_PROFILE_RELEASE"
+    "$<IF:$<CONFIG:Debug>,NS3_BUILD_PROFILE_DEBUG,NS3_BUILD_PROFILE_RELEASE>")
 vcpkg_fixup_pkgconfig()
 
 file(REMOVE_RECURSE

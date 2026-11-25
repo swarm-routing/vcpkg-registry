@@ -8,6 +8,7 @@ Licensed per directory, as AntHocNet
 | Path | What | Licence |
 |------|------|---------|
 | `ports/`, `templates/`, `versions/`, `tools/`, `test/`, `.github/`, `Makefile` | the ports, the versions database, the renderer, CI | `MIT OR GPL-2.0-only` |
+| `test/consumer/ns3/` | the ns-3 ports' consumer: it includes ns-3's headers (GPL-2.0-only), so the dual-licensed tree must not hold it | `GPL-2.0-only` |
 | `docs/`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, `SECURITY.md`, `LICENSING.md` | docs (org rule 1) | `GPL-2.0-only` |
 | everything else | | `MIT OR GPL-2.0-only` |
 

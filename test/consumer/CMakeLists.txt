@@ -18,7 +18,8 @@ target_link_libraries(consumer PRIVATE swarm::core)
 set(CONSUMER_PORTS "" CACHE STRING "the ports vcpkg installed for this triplet")
 if("ns3" IN_LIST CONSUMER_PORTS)
   find_package(ns3 CONFIG REQUIRED)
-  add_executable(consumer-ns3 consumer-ns3.cc)
+  # ns3/ is GPL-2.0-only: it includes ns-3's headers (LICENSING.md)
+  add_executable(consumer-ns3 ns3/consumer-ns3.cc)
   # ns-3.49's headers need C++23; its exported targets do not say so
   target_compile_features(consumer-ns3 PRIVATE cxx_std_23)
   target_link_libraries(consumer-ns3 PRIVATE

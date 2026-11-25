@@ -255,6 +255,8 @@ def bump(root, port, tag, base_url=""):
     version = tag_version(text, tag)
     manifest = read_json(os.path.join(src, "vcpkg.json"))
     key = version_key(manifest)
+    if key == "version-semver" and not re.fullmatch(r"\d+\.\d+\.\d+", version):
+        raise Failure(f"{port}: version-semver needs X.Y.Z, not {version}")
     vpath = versions_file(root, port)
     db = read_json(vpath) if os.path.exists(vpath) else {"versions": []}
     later = [
@@ -687,6 +689,19 @@ def self_test():
             "nor its sha1",
         )
         raises(lambda: bump(repo, "sim", "v3.9.0", base), "tag form", "sim-X.Y")
+        write_json(
+            os.path.join(repo, "ports/sim/vcpkg.json"),
+            {"name": "sim", "version-semver": "3.8.0", "description": "sim, kept"},
+        )
+        raises(
+            lambda: bump(repo, "sim", "sim-3.9", base),
+            "an X.Y release under version-semver",
+            "needs X.Y.Z",
+        )
+        write_json(
+            os.path.join(repo, "ports/sim/vcpkg.json"),
+            {"name": "sim", "version": "3.8", "description": "sim, kept"},
+        )
         page(f"<p>sha1sum: {hashlib.sha1(b'sim').hexdigest()}</p>")
         r = bump(repo, "sim", "sim-3.9", base)
         m = read_json(os.path.join(repo, "ports/sim/vcpkg.json"))

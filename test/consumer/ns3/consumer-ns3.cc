@@ -1,5 +1,5 @@
 // Copyright (c) 2026 Daniel Joppi (https://github.com/swarm-routing)
-// SPDX-License-Identifier: MIT OR GPL-2.0-only
+// SPDX-License-Identifier: GPL-2.0-only
 //
 // The scratch consumer of the ns3 port (#76): two nodes on a point-to-point
 // link, a UDP echo client and server, routed by the installed internet
