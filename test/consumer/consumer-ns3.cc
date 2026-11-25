@@ -14,6 +14,9 @@
 #ifdef CONSUMER_ROUTING_BENCH
 #include "ns3/routing-bench-module.h"
 #endif
+#ifdef CONSUMER_SWARM_ADAPTER
+#include "ns3/swarm-core-module.h"
+#endif
 
 #include <cstdio>
 

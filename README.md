@@ -30,7 +30,9 @@ AODV is exposed); **NS3-002**, AODV and DSDV order sockets by heap address
 (routing-bench's `--isolateArms`); **NS3-003**, DSDV on a route with a null
 output device (avoid DSDV on multi-interface topologies). It is not built for
 `wasm32-emscripten`: ns-3 has no WebAssembly support, and ns-3 needs shared
-libraries, which that triplet does not build (#76). The port also installs
+libraries, which that triplet does not build (#76). Its headers need C++23
+(ns-3.49's minimum), which its targets do not set:
+`target_compile_features(main PRIVATE cxx_std_23)`. The port also installs
 `share/ns3/contrib/`, the project the ns-3 module ports build an ns-3
 contrib module with, outside an ns-3 tree.
 
@@ -50,6 +52,7 @@ swarm-routing/.github#436):
 | `termite-core` | `termite-core`, `termite::core` | swarm-routing/Termite#135, then a release |
 | `hopnet-core` | `hopnet-core`, `hopnet::core` | swarm-routing/HOPNET#143, then a release |
 | `anthocnet-core` | `anthocnet-core`, `anthocnet::core` | swarm-routing/AntHocNet#1037, then a release (its `anthocnet-<ver>.zip`, checked against `<asset>.sha256`) |
+| `swarm-adapter-ns3` | `swarm-adapter-ns3`, `ns3::swarm-core` (the ns-3 module, on the `ns3` and `swarm-core` ports; x64-linux only) | swarm-routing/swarm-adapter-ns3's next release: the first with `SWARM_CORE_FROM_PACKAGE` (its `swarm-core-<ver>.tar.gz`) |
 ## Use the registry
 
 Add it next to vcpkg's own registry in your project's

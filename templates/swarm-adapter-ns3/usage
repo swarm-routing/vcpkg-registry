@@ -1,0 +1,8 @@
+swarm-adapter-ns3 provides the ns-3 module swarm-core, on the ns3 and
+swarm-core ports:
+
+    find_package(swarm-adapter-ns3 CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE ns3::swarm-core)
+
+Headers: #include "ns3/swarm-core-module.h" (the glue and swarm-core's
+primitives). x64-linux only.

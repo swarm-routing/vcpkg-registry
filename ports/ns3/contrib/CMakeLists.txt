@@ -22,6 +22,7 @@ project(ns3-contrib LANGUAGES CXX)
 
 set(NS3_CONTRIB_PACKAGE "" CACHE STRING "the CMake package to install (the vcpkg port's name)")
 set(NS3_CONTRIB_MODULES "" CACHE STRING "the module source directories, ;-separated")
+set(NS3_CONTRIB_DEPENDENCIES "" CACHE STRING "other CMake packages the modules link, found again by the installed package's config")
 option(NS3_CONTRIB_EXAMPLES "build each module's examples/ programs" ON)
 if(NOT NS3_CONTRIB_PACKAGE OR NOT NS3_CONTRIB_MODULES)
   message(FATAL_ERROR "ns3-contrib: set NS3_CONTRIB_PACKAGE and NS3_CONTRIB_MODULES")
@@ -83,9 +84,9 @@ function(build_lib)
     install(FILES "${abs}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ns3")
     string(APPEND umbrella "#include \"ns3/${name}\"\n")
   endforeach()
-  file(CONFIGURE OUTPUT "${CMAKE_BINARY_DIR}/umbrella/${BLIB_LIBNAME}-module.h"
+  file(CONFIGURE OUTPUT "${CMAKE_HEADER_OUTPUT_DIRECTORY}/${BLIB_LIBNAME}-module.h"
        CONTENT "${umbrella}" @ONLY)
-  install(FILES "${CMAKE_BINARY_DIR}/umbrella/${BLIB_LIBNAME}-module.h"
+  install(FILES "${CMAKE_HEADER_OUTPUT_DIRECTORY}/${BLIB_LIBNAME}-module.h"
           DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ns3")
   install(TARGETS ${target} EXPORT ns3ExportTargets
           LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
@@ -113,9 +114,12 @@ endforeach()
 set(pkg "${NS3_CONTRIB_PACKAGE}")
 install(EXPORT ns3ExportTargets FILE "${pkg}Targets.cmake" NAMESPACE ns3::
         DESTINATION "share/${pkg}")
+set(deps "find_dependency(ns3 CONFIG)\n")
+foreach(d IN LISTS NS3_CONTRIB_DEPENDENCIES)
+  string(APPEND deps "find_dependency(${d} CONFIG)\n")
+endforeach()
 file(CONFIGURE OUTPUT "${CMAKE_BINARY_DIR}/${pkg}Config.cmake" CONTENT
 "include(CMakeFindDependencyMacro)
-find_dependency(ns3 CONFIG)
-include(\"\${CMAKE_CURRENT_LIST_DIR}/${pkg}Targets.cmake\")
+${deps}include(\"\${CMAKE_CURRENT_LIST_DIR}/${pkg}Targets.cmake\")
 " @ONLY)
 install(FILES "${CMAKE_BINARY_DIR}/${pkg}Config.cmake" DESTINATION "share/${pkg}")

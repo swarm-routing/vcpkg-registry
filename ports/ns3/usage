@@ -3,6 +3,10 @@ ns3 provides ns-3's own CMake package, one target per module:
     find_package(ns3 CONFIG REQUIRED)
     target_link_libraries(main PRIVATE ns3::core ns3::internet ns3::wifi)
 
-Headers as in an ns-3 tree: #include "ns3/core-module.h". Shared libraries
-only (x64-linux). Known ns-3 bugs on this release and the org's workarounds:
+Headers as in an ns-3 tree: #include "ns3/core-module.h". They need C++23
+(ns-3.49's minimum), which the targets do not set for you:
+
+    target_compile_features(main PRIVATE cxx_std_23)
+
+Shared libraries only (x64-linux). Known ns-3 bugs on this release and the org's workarounds:
 https://github.com/swarm-routing/sim-tools/blob/main/docs/ns3-bugs.md
