@@ -9,7 +9,7 @@
       "port-version": 0
     },
     "beeadhoc-core": {
-      "baseline": "0.2.1",
+      "baseline": "0.3.0",
       "port-version": 0
     },
     "ns3": {
