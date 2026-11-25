@@ -11,7 +11,7 @@ vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 vcpkg_download_distfile(ARCHIVE
     URLS "https://github.com/swarm-routing/HOPNET/releases/download/v${VERSION}/hopnet-${VERSION}.tar.gz"
     FILENAME "hopnet-${VERSION}.tar.gz"
-    SHA512 0
+    SHA512 8af79765b656abb84f9f044ead3f85aef44aa54a07b0416e92cb1c865fa4591ac4c219d7048c6a776565fa176b0c5b7703a79c925085a9eecec7478e8877d62f
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
 

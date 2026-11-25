@@ -1,7 +1,7 @@
 {
   "name": "hopnet-core",
-  "version-semver": "0.0.0",
-  "description": "The simulator-free C++ core of HOPNET, ant-colony routing over zones (Wang, 2007), from swarm-routing/HOPNET's core/.",
+  "version-semver": "0.2.1",
+  "description": "HOPNET (Wang, 2007) as a standalone swarm routing protocol for MANETs: ant-colony routing over routing zones, proactive inside a zone and reactive between zones. A simulator-agnostic C++ core and an ns-3 contrib module on swarm-core.",
   "homepage": "https://github.com/swarm-routing/HOPNET",
   "license": "MIT OR GPL-2.0-only",
   "dependencies": [
