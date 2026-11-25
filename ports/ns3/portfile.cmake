@@ -14,13 +14,14 @@
 # downloaded tarball, checked first against the SHA-1 the release's download
 # page lists (CHECKSUM_PAGE below), never by hand.
 #
-# Stock on purpose: the images stay stock and the org works around ns-3 bugs
-# in its own code (swarm-routing/sim-tools docs/ns3-bugs.md, maintainer
-# decision 2026-11-23), so this port carries no patch. On ns-3.49:
+# The ns-3 bugs of the org's register (swarm-routing/sim-tools
+# docs/ns3-bugs.md) and what this port does about each:
 #   NS3-001  stock AODV livelocks in a zero-time ICMP "net unreachable" storm
-#            (nsnam/ns-3-dev#1408, fix nsnam/ns-3-dev!3101 open): routing-bench
-#            (the routing-bench port) installs its aodv arm behind
-#            IcmpErrorGuardHelper; a program running stock AODV here is exposed.
+#            (nsnam/ns-3-dev#1408, from ns-3.49's Ipv4L3Protocol::SendIcmpNoRoute).
+#            Patched when the source has the bug (maintainer decision
+#            2026-11-25), so stock AODV works on this port; see "NS3-001" below.
+#            Unlike the images, which stay stock (decision 2026-11-23):
+#            routing-bench keeps its IcmpErrorGuardHelper either way.
 #   NS3-002  AODV and DSDV order per-interface sockets by heap address
 #            (nsnam/ns-3-dev#1409): routing-bench's --isolateArms (default).
 #   NS3-003  DSDV sends on a route with a null output device
@@ -39,6 +40,42 @@ vcpkg_download_distfile(ARCHIVE
     SHA512 d18a44d0acc570ff1d3ef99632ff5493d2b204eb9e0c3ba20059cdea772ac36f0808c00a95e04327541f374902297de14acd5bb7cddabaf42348f3348485c7c6
 )
 vcpkg_extract_source_archive(SOURCE_PATH ARCHIVE "${ARCHIVE}")
+
+# NS3-001: the upstream fix, nsnam/ns-3-dev!3101 (open, not ours), as the
+# merge request's diff at its head d3fbcacb25d5a1e3ac314089f3e39fc6ec8531f6
+# against its base a150de8f (patches/, GPL-2.0-only, LICENSING.md); its
+# pre-image of ipv4-l3-protocol.cc is ns-3.49's (blob 993e0a99). Applied by
+# what the source holds, not by a version list, as the release that will carry
+# the fix is not known:
+#   no SendIcmpNoRoute        the code predates the bug (ns-3.48 and earlier)
+#   the patch applies         the bug is there (ns-3.49): apply it
+#   it applies in reverse     the release already has the fix: nothing to do
+#   neither                   upstream changed that code: stop, and re-check
+#                             NS3-001 in the register before bumping
+set(ns3_001_patch "${CMAKE_CURRENT_LIST_DIR}/patches/ns3-001-icmp-no-route-mr3101.patch")
+file(READ "${SOURCE_PATH}/src/internet/model/ipv4-l3-protocol.cc" ns3_ipv4_l3)
+if(NOT ns3_ipv4_l3 MATCHES "SendIcmpNoRoute")
+    message(STATUS "NS3-001: ns-${VERSION} has no SendIcmpNoRoute, so no bug and no patch")
+else()
+    vcpkg_find_acquire_program(GIT)
+    # --git-dir=.git: never the repository the build tree may sit in (vcpkg's)
+    set(ns3_git "${GIT}" -c core.autocrlf=false --work-tree=. --git-dir=.git apply)
+    execute_process(COMMAND ${ns3_git} --check "${ns3_001_patch}"
+        WORKING_DIRECTORY "${SOURCE_PATH}" RESULT_VARIABLE ns3_001_forward OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND ${ns3_git} --check --reverse "${ns3_001_patch}"
+        WORKING_DIRECTORY "${SOURCE_PATH}" RESULT_VARIABLE ns3_001_reverse OUTPUT_QUIET ERROR_QUIET)
+    if(ns3_001_forward EQUAL 0)
+        execute_process(COMMAND ${ns3_git} "${ns3_001_patch}"
+            WORKING_DIRECTORY "${SOURCE_PATH}" COMMAND_ERROR_IS_FATAL ANY)
+        message(STATUS "NS3-001: ns-${VERSION} has the bug: nsnam/ns-3-dev!3101 applied")
+    elseif(ns3_001_reverse EQUAL 0)
+        message(STATUS "NS3-001: ns-${VERSION} already has the fix: no patch")
+    else()
+        message(FATAL_ERROR "NS3-001: ns-${VERSION} changed SendIcmpNoRoute and neither has "
+            "nsnam/ns-3-dev!3101 nor takes it: re-check NS3-001 (swarm-routing/sim-tools "
+            "docs/ns3-bugs.md) and update or drop patches/ns3-001-icmp-no-route-mr3101.patch")
+    endif()
+endif()
 
 # The modules of the images (sim-containers docker/Dockerfile NS3_MODULES);
 # ns-3 adds their dependencies (propagation, spectrum, antenna, bridge,

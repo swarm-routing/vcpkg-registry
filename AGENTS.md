@@ -19,9 +19,12 @@ opens the bump PR here (swarm-routing/.github#439). The ns-3 modules are
 ports too (swarm-routing/.github#881, replacing swarm-routing/.github#440),
 built on the `ns3` port through its `share/ns3/contrib/` project and
 installed on `x64-linux` only: a port's `supports` decides the triplets CI
-installs it on. ns-3 itself stays stock; its bugs are worked around in the
-org's modules, each named by its NS3 ID (swarm-routing/sim-tools
-`docs/ns3-bugs.md`). In-org repositories consume swarm-core by
+installs it on. ns-3's bugs are named by their NS3 ID (swarm-routing/sim-tools
+`docs/ns3-bugs.md`); the `ns3` port applies an upstream fix from
+`ports/ns3/patches/` (GPL-2.0-only) only when the source has the bug, decided
+from the source, not a version list (NS3-001: nsnam/ns-3-dev!3101), and the
+org's modules keep their own workarounds. A change to a port at the same
+release is `port_bump.py revise --port <port>` (the next port-version). In-org repositories consume swarm-core by
 release lock, not through this registry (CONTRIBUTING "Dependencies").
 
 ```
