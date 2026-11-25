@@ -18,6 +18,23 @@ builds a `find_package` consumer (epic swarm-routing/.github#436).
 | Port | Version | Library | Package and target | Source |
 |------|---------|---------|--------------------|--------|
 | `swarm-core` | [![vcpkg: swarm-core](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fswarm-core%2Fvcpkg.json&query=%24%5B%22version-semver%22%5D&label=vcpkg%20swarm-core)](ports/swarm-core) | the shared swarm-routing primitives (`core/` of [ns3-swarm-core](https://github.com/swarm-routing/ns3-swarm-core)), C++23 (since 0.4.0) | `find_package(swarm-core CONFIG REQUIRED)`, `swarm::core` | `swarm-core-<ver>.tar.gz` of each release |
+| `ns3` | [![vcpkg: ns3](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fns3%2Fvcpkg.json&query=%24.version&label=vcpkg%20ns3)](ports/ns3) | stock [ns-3](https://www.nsnam.org), the release the org's images build, with their modules, shared libraries; x64-linux only (#76) | `find_package(ns3 CONFIG REQUIRED)`, `ns3::<module>` (`ns3::core`, `ns3::wifi`, …) | `ns-<ver>.tar.bz2` from nsnam.org, checked against the SHA-1 its download page lists |
+| `sim-tools-ns3` | [![vcpkg: sim-tools-ns3](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fswarm-routing%2Fvcpkg-registry%2Fmain%2Fports%2Fsim-tools-ns3%2Fvcpkg.json&query=%24%5B%22version-semver%22%5D&label=vcpkg%20sim-tools-ns3)](ports/sim-tools-ns3) | sim-tools' ns-3 modules (its `ns3/` folder: routing-bench, the comparison harness with the stock arms), on the `ns3` port; one port per simulator folder of [sim-tools](https://github.com/swarm-routing/sim-tools); x64-linux only | `find_package(sim-tools-ns3 CONFIG REQUIRED)`, `ns3::routing-bench`; `routing-compare` in `tools/sim-tools-ns3/` | `routing-bench-<ver>.tar.gz` of each release |
+
+The `ns3` port carries no patch: as the org's images, it is stock ns-3, and
+the org works around ns-3's bugs in its own modules
+([the register](https://github.com/swarm-routing/sim-tools/blob/main/docs/ns3-bugs.md)).
+On ns-3.49: **NS3-001**, stock AODV livelocks in a zero-time ICMP storm
+(routing-bench guards its aodv arm, `IcmpErrorGuardHelper`; your own stock
+AODV is exposed); **NS3-002**, AODV and DSDV order sockets by heap address
+(routing-bench's `--isolateArms`); **NS3-003**, DSDV on a route with a null
+output device (avoid DSDV on multi-interface topologies). It is not built for
+`wasm32-emscripten`: ns-3 has no WebAssembly support, and ns-3 needs shared
+libraries, which that triplet does not build (#76). Its headers need C++23
+(ns-3.49's minimum), which its targets do not set:
+`target_compile_features(main PRIVATE cxx_std_23)`. The port also installs
+`share/ns3/contrib/`, the project the ns-3 module ports build an ns-3
+contrib module with, outside an ns-3 tree.
 
 Each port's description is its upstream repository's GitHub description
 (declared as code there), written by `tools/port_bump.py` at every bump
@@ -36,7 +53,7 @@ swarm-routing/.github#436):
 | `hopnet-core` | `hopnet-core`, `hopnet::core` | swarm-routing/HOPNET#143, then a release |
 | `q-swarm-core` | `q-swarm-core`, `qswarm::core` | a Q-Swarm release (the package since swarm-routing/Q-Swarm#37) |
 | `anthocnet-core` | `anthocnet-core`, `anthocnet::core` | swarm-routing/AntHocNet#1037, then a release (its `anthocnet-<ver>.zip`, checked against `<asset>.sha256`) |
-
+| `swarm-adapter-ns3` | `swarm-adapter-ns3`, `ns3::swarm-core` (the ns-3 module, on the `ns3` and `swarm-core` ports; x64-linux only) | swarm-routing/swarm-adapter-ns3's next release: the first with `SWARM_CORE_FROM_PACKAGE` (its `swarm-core-<ver>.tar.gz`) |
 ## Use the registry
 
 Add it next to vcpkg's own registry in your project's
@@ -115,14 +132,20 @@ in `ports/` yet is created from `templates/<port>/` on its library's first
 release. `python3 -I tools/port_bump.py check` says whether `versions/`
 matches `ports/`; CI also runs vcpkg's `x-ci-verify-versions`.
 
-## What is not a port
+## The ns-3 modules
 
-The ns-3 modules (swarm-core's `model/`, each protocol's `ns3/`, ns3-tools'
-`routing-bench`) are ns-3 contrib modules built inside an ns-3 tree, and
-vcpkg has no ns-3 port to build them on; they ship as release tarballs and
-images (verdict: swarm-routing/.github#440). In-org repositories take
-swarm-core by its release lock, not through this registry
+Every C++ release gets a port, the ns-3 modules included (maintainer
+decision 2026-11-24, swarm-routing/.github#881, replacing the verdict of
+swarm-routing/.github#440). They are built on the `ns3` port, through its
+`share/ns3/contrib/` project, and installed beside it: sim-tools' modules as
+`sim-tools-ns3` (one port per simulator folder of sim-tools), swarm-adapter-ns3's
+module as `swarm-adapter-ns3`. In-org repositories still take swarm-core by
+its release lock, not through this registry
 ([CONTRIBUTING "Dependencies"](https://github.com/swarm-routing/.github/blob/main/CONTRIBUTING.md#dependencies)).
+
+`tools/port_bump.py bump --port ns3 --tag ns-3.50` bumps ns-3 itself: the
+portfile declares its tag form (`# RELEASE_TAG`) and the page that lists the
+tarball's checksum (`# CHECKSUM_PAGE`), as nsnam.org is not a GitHub release.
 
 <!-- org-sync:begin develop -->
 ## Develop

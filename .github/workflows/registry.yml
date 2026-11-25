@@ -95,7 +95,7 @@ jobs:
   install:
     name: install (${{ matrix.triplet }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -156,8 +156,10 @@ jobs:
           exit "$bad"
       - name: Install every port from this registry and build the consumer
         if: steps.changes.outputs.docs-only != 'true'
-        # recent runs: ~1 min (x64-linux), ~2 min (wasm32-emscripten)
-        timeout-minutes: 20
+        # recent runs: ~1 min (x64-linux), ~2 min (wasm32-emscripten); the
+        # ns3 port adds ~10 min on x64-linux (ns-3.49 debug and release on 4
+        # cores, measured for #76; 1.7 GB of build trees)
+        timeout-minutes: 40
         env:
           TRIPLET: ${{ matrix.triplet }}
         run: |
@@ -165,21 +167,37 @@ jobs:
           work="$RUNNER_TEMP/consumer"
           cp -r test/consumer "$work"
           # every port of this registry, from this commit
-          python3 - "$work" "$GITHUB_WORKSPACE" "$(git rev-parse HEAD)" "$VCPKG_COMMIT" <<'EOF'
+          python3 - "$work" "$GITHUB_WORKSPACE" "$(git rev-parse HEAD)" "$VCPKG_COMMIT" "$TRIPLET" <<'EOF'
           import json, os, sys
-          work, repo, head, vcpkg = sys.argv[1:]
+          work, repo, head, vcpkg, triplet = sys.argv[1:]
+          # the platform terms of the two triplets, for `supports` written as
+          # `a & b & !c` (the only form the ports use)
+          terms = {"x64-linux": {"x64", "linux"}, "wasm32-emscripten": {"wasm32", "emscripten"}}[triplet]
+          def supported(expr):
+              return all((t[1:] not in terms) if t.startswith("!") else (t in terms)
+                         for t in (s.strip() for s in expr.split("&")))
           ports = sorted(os.listdir(os.path.join(repo, "ports")))
           json.dump({"default-registry": {"kind": "builtin", "baseline": vcpkg},
                      "registries": [{"kind": "git", "repository": repo, "reference": "HEAD",
                                      "baseline": head, "packages": ports}]},
                     open(os.path.join(work, "vcpkg-configuration.json"), "w"), indent=2)
+          # a port that supports only some triplets (ns3: x64 & linux, #76) is
+          # a dependency on those only: its `supports` is the dependency's platform
+          deps, here = [], []
+          for p in ports:
+              s = json.load(open(os.path.join(repo, "ports", p, "vcpkg.json"))).get("supports")
+              deps.append({"name": p, "platform": s} if s else p)
+              if not s or supported(s):
+                  here.append(p)
           m = json.load(open(os.path.join(work, "vcpkg.json")))
-          m["dependencies"] = ports
+          m["dependencies"] = deps
           json.dump(m, open(os.path.join(work, "vcpkg.json"), "w"), indent=2)
-          print("ports:", " ".join(ports))
+          open(os.path.join(work, "ports.txt"), "w").write(";".join(here))
+          print("ports:", " ".join(ports), "| on", triplet + ":", " ".join(here))
           EOF
           cat "$work/vcpkg-configuration.json"
-          args=(-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET="$TRIPLET")
+          args=(-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET="$TRIPLET"
+                -DCONSUMER_PORTS="$(cat "$work/ports.txt")")
           if [ "$TRIPLET" = wasm32-emscripten ]; then
             # shellcheck disable=SC1091
             source "$EMSDK/emsdk_env.sh"
@@ -188,6 +206,10 @@ jobs:
           cmake -S "$work" -B "$work/build" -G Ninja "${args[@]}"
           cmake --build "$work/build"
           if [ "$TRIPLET" = wasm32-emscripten ]; then node "$work/build/consumer.js"; else "$work/build/consumer"; fi
+          if [ -x "$work/build/consumer-ns3" ]; then "$work/build/consumer-ns3"; fi
+          # what the ns-3 ports cost (#76): the build trees and the install tree
+          du -sh "$VCPKG_ROOT/buildtrees" "$work/build/vcpkg_installed" "$VCPKG_ROOT/downloads" 2>/dev/null || true
+          df -h "$RUNNER_TEMP" | tail -1
       - name: vcpkg logs
         if: steps.changes.outputs.docs-only != 'true' && (failure())
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

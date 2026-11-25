@@ -38,7 +38,7 @@ shell: ## an interactive shell in the dev image with this repo at /src
 	docker run --rm -it -v "$(CURDIR):/src" -w /src $(if $(PLATFORM),--platform $(PLATFORM)) $(NS3_IMAGE) bash
 
 headers: org-tools ## licence headers (org rule 1)
-	"$(ORG_DIR)/tools/checks/check-headers.sh" --dual '' --core '' .
+	"$(ORG_DIR)/tools/checks/check-headers.sh" --dual '' --core '' --gpl-only test/consumer/ns3/consumer-ns3.cc .
 
 check: lint test headers org-sync-check ## everything CI gates on
 
