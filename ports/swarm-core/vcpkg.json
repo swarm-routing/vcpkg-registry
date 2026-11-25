@@ -1,6 +1,6 @@
 {
   "name": "swarm-core",
-  "version-semver": "2.0.0",
+  "version-semver": "2.1.0",
   "description": "swarm-core: the pure C++23 ports every swarm-routing protocol core builds on (IClock, ITransport, IRouteTable, IEnergyProvider, ILocationProvider, ILinkMetrics), the 4-byte common wire envelope and header-only protocol contract tests; no OS or simulator headers.",
   "homepage": "https://github.com/swarm-routing/swarm-core",
   "license": "MIT OR GPL-2.0-only",
