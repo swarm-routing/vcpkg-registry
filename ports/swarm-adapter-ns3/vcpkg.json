@@ -1,7 +1,7 @@
 {
   "name": "swarm-adapter-ns3",
-  "version-semver": "0.0.0",
-  "description": "swarm-adapter-ns3's ns-3 module swarm-core.",
+  "version-semver": "2.1.0",
+  "description": "swarm-adapter-ns3, the ns-3 adapter of swarm-core's ports: the ns-3 contrib module (still named swarm-core) every swarm-routing protocol links against, SwarmRoutingBase, link monitors, energy hook and deferred queue, on swarm-routing/swarm-core's C++23 primitives.",
   "homepage": "https://github.com/swarm-routing/swarm-adapter-ns3",
   "license": "GPL-2.0-only",
   "supports": "x64 & linux",
