@@ -7,7 +7,7 @@ before changing anything. Org-wide conventions:
 
 ## What this repo is
 
-**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the five protocol cores wait in `templates/` for their first release with a CMake package (swarm-routing/.github#436); the `ns3` port (stock ns-3.49, x64-linux only) is the base of the ns-3 module ports, `sim-tools-ns3` the first (#76, swarm-routing/.github#881).** Epics: swarm-routing/.github#436, swarm-routing/.github#881.
+**Status: the `swarm-core` port installs on `x64-linux` and `wasm32-emscripten` (#1); the five protocol cores wait in `templates/` for their first release with a CMake package (swarm-routing/.github#436); the `ns3` port (stock ns-3.49, x64-linux only) is the base of the ns-3 module ports, `sim-tools-ns3` and `swarm-adapter-ns3` on it (#76, swarm-routing/.github#881).** Epics: swarm-routing/.github#436, swarm-routing/.github#881.
 
 The swarm-routing org's [vcpkg git registry](https://learn.microsoft.com/vcpkg/maintainers/registries):
 one port per simulator-free C++ core the org releases (`swarm-core` first,
@@ -28,10 +28,10 @@ release is `port_bump.py revise --port <port>` (the next port-version). In-org r
 release lock, not through this registry (CONTRIBUTING "Dependencies").
 
 ```
-ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core, the protocol cores, ns3, sim-tools-ns3: one per sim-tools simulator folder)
+ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core, the protocol cores, ns3, sim-tools-ns3: one per sim-tools simulator folder, swarm-adapter-ns3)
 ports/ns3/contrib/   the CMake project module ports build an ns-3 contrib module with (build_lib outside an ns-3 tree)
 versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
-templates/<port>/    a port not released yet (termite-core, hopnet-core, swarm-adapter-ns3): moved into ports/ on its
+templates/<port>/    a port not released yet (termite-core, hopnet-core): moved into ports/ on its
                      repository's first release that installs core/ as a CMake package (earlier releases cannot build it)
 tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/;
                      a release outside GitHub (ns-3) via the portfile's # RELEASE_TAG and # CHECKSUM_PAGE lines
