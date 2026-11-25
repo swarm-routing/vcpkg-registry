@@ -410,15 +410,22 @@ def revise(root, port):
         for e in db["versions"]
         if e.get(key) == version and e.get("port-version", 0) == pv
     ]
+    bpath = os.path.join(root, "versions", "baseline.json")
     if current and current[0]["git-tree"] == git_tree(root, port):
-        raise Failure(f"{port} {version}#{pv}: nothing changed in ports/{port}")
+        base = read_json(bpath)
+        if base["default"].get(port) == {"baseline": version, "port-version": pv}:
+            raise Failure(f"{port} {version}#{pv}: nothing changed in ports/{port}")
+        # an earlier revise stopped before the baseline: finish it
+        base["default"][port] = {"baseline": version, "port-version": pv}
+        write_json(bpath, base)
+        print(f"port_bump: {port} {version}#{pv}: baseline caught up", file=sys.stderr)
+        return {"port": port, "version": version, "port_version": pv}
     pv += 1
     manifest["port-version"] = pv
     write_json(mpath, manifest)
     tree = git_tree(root, port)
     db["versions"].insert(0, {key: version, "port-version": pv, "git-tree": tree})
     write_json(vpath, db)
-    bpath = os.path.join(root, "versions", "baseline.json")
     base = read_json(bpath)
     base["default"][port] = {"baseline": version, "port-version": pv}
     write_json(bpath, base)
@@ -710,6 +717,16 @@ def self_test():
             == 2
             and check(repo) == 0,
             "revise: the next port-version, recorded; check passes",
+        )
+        bpath = os.path.join(repo, "versions/baseline.json")
+        stale = read_json(bpath)
+        stale["default"]["lib"]["port-version"] = 1
+        write_json(bpath, stale)
+        revise(repo, "lib")
+        expect(
+            read_json(bpath)["default"]["lib"]["port-version"] == 2
+            and check(repo) == 0,
+            "revise after a stopped revise: the baseline catches up",
         )
         raises(lambda: revise(repo, "nope"), "revise an unknown port", "no ports/nope")
 
