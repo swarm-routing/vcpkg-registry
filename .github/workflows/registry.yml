@@ -45,7 +45,7 @@ jobs:
         with:
           egress-policy: audit
       # a docs-only change skips the steps below; the check still reports (swarm-routing/.github#581)
-      - uses: swarm-routing/.github/.github/actions/changes@841a8f45da19e3ca543e9c59b552349cb48560ff # main@2026-11-27
+      - uses: swarm-routing/.github/.github/actions/changes@53a7039ff98b442401dd412d2c1ebc453b908260 # main@2026-11-27
         id: changes
         timeout-minutes: 2
         with:
@@ -72,7 +72,7 @@ jobs:
   # (swarm-routing/.github#635). Its ruff check reads the org ruff.toml; its
   # format check is off, as `tools` keeps ruff's default format (line length 88).
   python:
-    uses: swarm-routing/.github/.github/workflows/reusable-python-ci.yml@841a8f45da19e3ca543e9c59b552349cb48560ff # main@2026-11-27
+    uses: swarm-routing/.github/.github/workflows/reusable-python-ci.yml@53a7039ff98b442401dd412d2c1ebc453b908260 # main@2026-11-27
     with:
       paths: tools
       ruff-format: false
@@ -87,7 +87,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: swarm-routing/.github/.github/workflows/reusable-codecov.yml@841a8f45da19e3ca543e9c59b552349cb48560ff # main@2026-11-27
+    uses: swarm-routing/.github/.github/workflows/reusable-codecov.yml@53a7039ff98b442401dd412d2c1ebc453b908260 # main@2026-11-27
     with:
       artifact: python-coverage
       flags: python
@@ -107,7 +107,7 @@ jobs:
         with:
           egress-policy: audit
       # a docs-only change skips the steps below; the check still reports (swarm-routing/.github#581)
-      - uses: swarm-routing/.github/.github/actions/changes@841a8f45da19e3ca543e9c59b552349cb48560ff # main@2026-11-27
+      - uses: swarm-routing/.github/.github/actions/changes@53a7039ff98b442401dd412d2c1ebc453b908260 # main@2026-11-27
         id: changes
         timeout-minutes: 2
         with:
