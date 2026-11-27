@@ -37,6 +37,7 @@ tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tre
                      a release outside GitHub (ns-3) via the portfile's # RELEASE_TAG and # CHECKSUM_PAGE lines
 test/consumer/       the scratch project CI builds with find_package against every port
 .github/workflows/registry.yml   tools (self-test, check, ruff), install (x64-linux, wasm32-emscripten), x-ci-verify-versions; python (the self-test under coverage, report-only) and codecov (its upload)
+.github/workflows/port-descriptions.yml   weekly or dispatched: port_bump.py refresh of every port; the org bot's PR from bot/port-descriptions (#100)
 .github/workflows/release.yml    the registry's own releases, through swarm-routing/.github's reusable-release.yml, on the maintainer's request only (swarm-routing/.github#636)
 .cz.toml, CITATION.cff           Commitizen config and citation metadata; `make dist` packs the release asset; docs/roadmap.md: the release ladder
 ```

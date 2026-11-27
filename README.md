@@ -44,7 +44,8 @@ contrib module with, outside an ns-3 tree.
 
 Each port's description is its upstream repository's GitHub description
 (declared as code there), written by `tools/port_bump.py` at every bump
-(`refresh` re-reads it between releases), so it cannot go stale.
+(`refresh` re-reads it between releases, weekly in CI:
+`.github/workflows/port-descriptions.yml`), so it cannot go stale.
 
 The protocol cores follow, each on the `swarm-core` port: their ports wait
 in `templates/` and move into `ports/` by themselves on the first release of
