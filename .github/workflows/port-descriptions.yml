@@ -64,7 +64,7 @@ jobs:
       - name: Bot token
         id: bot
         timeout-minutes: 2
-        uses: swarm-routing/.github/.github/actions/bot-token@3a6638192e29fce4418eb76a6187d5c5537891a3 # main@2026-11-27
+        uses: swarm-routing/.github/.github/actions/bot-token@841a8f45da19e3ca543e9c59b552349cb48560ff # main@2026-11-27
         with:
           app-id: ${{ secrets.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
