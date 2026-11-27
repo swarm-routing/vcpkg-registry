@@ -1,0 +1,6 @@
+posant-core provides CMake targets:
+
+    find_package(posant-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE posant::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "posant-version.h" (include/posant-core/).
