@@ -31,7 +31,7 @@ release lock, not through this registry (CONTRIBUTING "Dependencies").
 ports/<port>/        vcpkg.json, portfile.cmake, usage: one port per library (swarm-core, the protocol cores, ns3, sim-tools-ns3: one per sim-tools simulator folder, swarm-adapter-ns3)
 ports/ns3/contrib/   the CMake project module ports build an ns-3 contrib module with (build_lib outside an ns-3 tree)
 versions/            baseline.json and versions/<x>-/<port>.json: the database, git-trees from git
-templates/<port>/    a port not released yet (termite-core, hopnet-core): moved into ports/ on its
+templates/<port>/    a port not released yet (termite-core, q-swarm-core, posant-core, beesensor-core): moved into ports/ on its
                      repository's first release that installs core/ as a CMake package (earlier releases cannot build it)
 tools/port_bump.py   renders a bump from a release (SHA512 of the asset, git-tree, versions/); check: versions/ matches ports/;
                      a release outside GitHub (ns-3) via the portfile's # RELEASE_TAG and # CHECKSUM_PAGE lines

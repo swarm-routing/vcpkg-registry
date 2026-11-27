@@ -1,0 +1,6 @@
+beesensor-core provides CMake targets:
+
+    find_package(beesensor-core CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE beesensor::core)
+
+It brings swarm-core (swarm::core) with it. Headers: #include "beesensor-core.h" (include/beesensor-core/).
