@@ -1,7 +1,7 @@
 {
   "name": "sim-tools-ns3",
   "version-semver": "1.1.4",
-  "description": "Protocol-agnostic ns-3 comparison and diagnostics tooling: the routing-bench harness every protocol arm registers with, the readers and paired statistics for its marker lines behind the ns3-tool CLI, the ns3-campaign driver, and (planned) probes and universal arenas.",
+  "description": "Protocol-agnostic ns-3 comparison tooling. Its ns-3 package (vcpkg port sim-tools-ns3) is the routing-bench module: the harness every protocol arm registers with, the stock aodv, olsr, dsdv and hwmp arms, and the routing-compare program. Its Python package (swarm-sim-tools) reads the marker lines: the ns3-tool CLI and the ns3-campaign driver.",
   "homepage": "https://github.com/swarm-routing/sim-tools",
   "license": "GPL-2.0-only",
   "supports": "x64 & linux",
@@ -15,5 +15,6 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "port-version": 1
 }

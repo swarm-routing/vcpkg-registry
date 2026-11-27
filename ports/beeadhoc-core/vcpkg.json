@@ -1,7 +1,7 @@
 {
   "name": "beeadhoc-core",
   "version-semver": "0.3.0",
-  "description": "BeeAdHoc, the honeybee-inspired routing protocol of Wedde & Farooq (2005), as a standalone swarm routing protocol for MANETs: scouts, foragers and an energy metric, as a planned simulator-agnostic C++ core and ns-3 contrib module on swarm-core.",
+  "description": "BeeAdHoc, the honeybee-inspired MANET routing protocol of Wedde & Farooq (2005), as PG 460's Linux module specifies it: a simulator-agnostic C++23 core (scouts, forager arrays rated by battery, swarms, a versioned source-route trailer, link failure; CMake package beeadhoc-core) and the ns-3 contrib module beeadhoc, on swarm-core.",
   "homepage": "https://github.com/swarm-routing/BeeAdHoc",
   "license": "MIT OR GPL-2.0-only",
   "dependencies": [
@@ -14,5 +14,6 @@
       "name": "vcpkg-cmake-config",
       "host": true
     }
-  ]
+  ],
+  "port-version": 1
 }
