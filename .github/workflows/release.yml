@@ -51,7 +51,7 @@ jobs:
     # commit of the push may be the bump, not only the newest (swarm-routing/.github#943).
     if: "${{ github.event_name != 'push' || contains(toJSON(github.event.commits.*.message), 'chore(release): bump version ') }}"
     permissions: { contents: write, pull-requests: write, id-token: write, attestations: write }
-    uses: swarm-routing/.github/.github/workflows/reusable-release.yml@3dc15c141b4e5a23b2178a5da77e07b562437a1c # main@2026-11-26
+    uses: swarm-routing/.github/.github/workflows/reusable-release.yml@bbb81f90c92b52dcb3ef0cfcdfdd655bef968391 # main@2026-11-27
     with:
       mode: ${{ inputs.mode }}   # empty on push: release
       increment: ${{ inputs.increment != 'auto' && inputs.increment || '' }}   # '' for auto and on push
