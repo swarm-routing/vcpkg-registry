@@ -66,7 +66,10 @@ commit is needed first, and `check` reads the working tree (run it before
 committing). A library's first release copies its port from `templates/`
 into `ports/` on its own. Between releases, `python3 -I tools/port_bump.py refresh
 --port swarm-core` re-reads the port's description from its repository and
-records a change as the next `port-version`.
+records a change as the next `port-version`; it needs to read the upstream
+repository through the API, so it runs in CI: `.github/workflows/port-descriptions.yml`
+(weekly, or dispatched with `ports`) refreshes every port and the org bot opens
+one PR from `bot/port-descriptions` when any description changed.
 
 ## Test
 

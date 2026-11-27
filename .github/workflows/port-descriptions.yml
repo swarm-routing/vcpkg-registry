@@ -1,0 +1,123 @@
+# Copyright (c) 2026 Daniel Joppi (https://github.com/swarm-routing)
+# SPDX-License-Identifier: MIT OR GPL-2.0-only
+name: Port descriptions
+
+# A port's description is its upstream repository's GitHub description.
+# `tools/port_bump.py refresh` re-reads it between releases and records a
+# change as the port's next port-version (swarm-routing/.github#993). It runs
+# here, where the token reads public repositories, not from an agent session,
+# which cannot (swarm-routing/.github#1010, #100). When any port changed, the
+# org bot force-pushes bot/port-descriptions (rebuilt on main each run) and
+# opens or updates one PR, auto-merge on, as the release job's `vcpkg-ports`
+# PR (swarm-routing/.github reusable-release.yml): a PR opened with
+# GITHUB_TOKEN would run no checks. Nothing changed: nothing is opened.
+on:
+  workflow_dispatch:
+    inputs:
+      ports:
+        description: "Space-separated ports to refresh; empty: every port in ports/ (a port that is not a GitHub release, ns3, keeps its description)"
+        type: string
+        default: ''
+  schedule:
+    - cron: '17 5 * * 1'   # Mondays 05:17 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  group: port-descriptions
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      PORTS: ${{ inputs.ports }}
+      BRANCH: bot/port-descriptions
+    steps:
+      - name: Harden the runner (audit egress)
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
+        timeout-minutes: 2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Refresh each port's description (tools/port_bump.py)
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}   # reads the upstream repositories (public)
+        run: |
+          ports="${PORTS:-$(cd ports && ls -d -- */ | tr -d /)}"
+          for p in $ports; do
+            case "$p" in *[!a-z0-9-]*|'') echo "::error::ports: '$p' is not a port name"; exit 1 ;; esac
+            python3 -I tools/port_bump.py refresh --port "$p"
+          done
+          python3 -I tools/port_bump.py check
+          git status --short
+      - name: Bot token
+        id: bot
+        timeout-minutes: 2
+        uses: swarm-routing/.github/.github/actions/bot-token@bbb81f90c92b52dcb3ef0cfcdfdd655bef968391 # main@2026-11-27
+        with:
+          app-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          fallback-token: ${{ secrets.ORG_BOT_TOKEN }}
+      - name: Push bot/port-descriptions and open or update the PR
+        timeout-minutes: 3
+        env:
+          BOT_TOKEN: ${{ steps.bot.outputs.token }}
+          BOT_NAME: ${{ steps.bot.outputs.git-name }}
+          BOT_EMAIL: ${{ steps.bot.outputs.git-email }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Every port's description is current: nothing to propose." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "::error::no bot token (neither the App secrets nor ORG_BOT_TOKEN): a PR opened with GITHUB_TOKEN runs no checks"
+            exit 1
+          fi
+          changed="$(git status --porcelain -- ports | awk '{print $2}' | cut -d/ -f2 | sort -u | tr '\n' ' ')"
+          changed="${changed% }"
+          title="fix(ports): ${changed// /, } description from upstream"
+          git config user.name "${BOT_NAME:-github-actions[bot]}"
+          git config user.email "${BOT_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+          git checkout -q -b "$BRANCH"
+          git add -- ports versions
+          git commit -q -m "$title" -m "Rendered by tools/port_bump.py refresh: each port's description is its upstream repository's GitHub description, the change its next port-version."
+          auth="$(printf 'x-access-token:%s' "$BOT_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          # the bot's branch, rebuilt on main each run: force-pushed
+          git -c "http.${GITHUB_SERVER_URL}/.extraheader=AUTHORIZATION: basic $auth" \
+            push --force origin "HEAD:refs/heads/${BRANCH}"
+          body="$RUNNER_TEMP/body.md"
+          {
+            echo "The descriptions of **${changed}** from their upstream repositories' GitHub descriptions, rendered by \`tools/port_bump.py refresh\` (each change the port's next port-version, with its git-tree and \`versions/\`); then \`port_bump.py check\`."
+            echo
+            echo "Part of #100."
+            echo
+            echo "Opened by run [${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) (\`.github/workflows/port-descriptions.yml\`)."
+          } > "$body"
+          export GH_TOKEN="$BOT_TOKEN"
+          n="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [ -n "$n" ]; then
+            gh pr edit "$n" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$body" > /dev/null
+            url="$(gh pr view "$n" --repo "$GITHUB_REPOSITORY" --json url --jq .url)"
+            echo "Updated ${url}"
+          else
+            url="$(gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --title "$title" --body-file "$body")"
+            echo "Opened ${url}"
+          fi
+          echo "### ${title}: ${url}" >> "$GITHUB_STEP_SUMMARY"
+          if gh pr merge "$url" --repo "$GITHUB_REPOSITORY" --auto --squash; then
+            echo "Auto-merge on: the merge queue lands ${url} once green" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::auto-merge not enabled on ${url}: merge it once its checks are green"
+          fi
